@@ -1,0 +1,2 @@
+# Non-project
+Some utils
