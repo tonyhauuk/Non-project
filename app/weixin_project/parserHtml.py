@@ -101,7 +101,7 @@ def filterAttrs(str):
 
 
 def foo():
-    fileList = ['./q1.htm', './q2.html', './w3.html']
+    fileList = ['./q1.html']
     url = ['https://www.q1q1q1.com', 'https://www.1111.com', 'http://qq.com']
     info = []
     index = 0
