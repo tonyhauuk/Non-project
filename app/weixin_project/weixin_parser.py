@@ -16,7 +16,18 @@ class WeixinParser:
 
     def parserHTML(self, htmlDoc, url):
         soup = BeautifulSoup(htmlDoc, 'html.parser')
-        html = soup.find(id='img-content')
+        html = soup.find(id='img-content', class_='original_page')
+
+        if html == None:
+            html = soup.find(id='img-content')
+            data = self.originHTML(html, soup, url)
+        else:
+            html = soup.find(id='img-content', class_='original_page')
+            data = self.sharedHTML(html, soup, url)
+
+        return data
+
+    def originHTML(self, html, soup, url):
         accountID = accountDesc = ''
         title = html.find(id='activity-name').get_text().strip()
         nickname = html.find(class_='profile_nickname').get_text()
@@ -37,7 +48,34 @@ class WeixinParser:
         uid = self.getUID(title)
 
         data = dict(uid=uid, title=title, nickname=nickname, accountID=accountID,
-                    accountDesc=accountDesc, url=url, publishData=publishDate, text=text)
+                    accountDesc=accountDesc, url=url, publishData=publishDate,
+                    share=False, text=text)
+
+        return data
+
+    def sharedHTML(self, html, soup, url):
+        accountID = accountDesc = ''
+        title = html.find('div', class_="original_panel_title").get_text().strip()
+        nickname = html.find(class_='account_nickname').get_text().strip()
+        account = html.find_all('p', class_='profile_meta')
+
+        for i in range(len(account)):
+            accountStr = account[i].find('label', class_='profile_meta_label').get_text()
+            if accountStr == '微信号' or accountStr == 'WeChat ID':
+                accountID = account[i].find('span', class_='profile_meta_value').get_text()
+                continue
+            elif accountStr == '功能介绍' or accountStr == 'Intro':
+                accountDesc = account[i].find('span', class_='profile_meta_value').get_text()
+                continue
+
+        content = html.find('p', id='js_share_notice').prettify()
+        text = self.retainImgTag(content)
+        publishDate = self.getDate(soup)
+        uid = self.getUID(title)
+
+        data = dict(uid=uid, title=title, nickname=nickname, accountID=accountID,
+                    accountDesc=accountDesc, url=url, publishData=publishDate,
+                    share=True, text=text)
 
         return data
 
@@ -66,29 +104,34 @@ class WeixinParser:
 
     def retainImgTag(self, img):
         all = re.findall(r'</?.*?>', img)
-        save = re.findall(r'</?(?:img).*?>', img)
+        save = re.findall(r'</?(?:img).*?/>', img)
 
         for e in all:
             if e not in save:
-                match = img.replace(e, '\n')
+                match = img.replace(e, '')
                 img = match
         result = ' '.join(img.split())
         result = self.filterAttrs(result)
+        result = result.replace('。 <img', '。\n<img')
+        result = result.replace(' <img', '\n<img')
+        result = result.replace('/> ', '/> \n')
+        result = result.replace('。 ', '。 \n')
 
         return result
 
     def filterAttrs(self, str):
-        filter1 = re.compile('(class=".*?)"', re.S | re.MULTILINE)
-        filter2 = re.compile('(data-copyright=".*?)"', re.S | re.MULTILINE)
-        filter3 = re.compile('(data-ratio=".*?)"', re.S | re.MULTILINE)
-        filter4 = re.compile('(data-s=".*?)"', re.S | re.MULTILINE)
-        filter5 = re.compile('(data-type=".*?)"', re.S | re.MULTILINE)
-        filter6 = re.compile('(data-w=".*?)"', re.S | re.MULTILINE)
-        filter7 = re.compile('(style=".*?)"', re.S | re.MULTILINE)
-        filter8 = re.compile('(data-croporisrc=".*?)"', re.S | re.MULTILINE)
-        filter9 = re.compile('(data-crop.+?=".*?)"', re.S | re.MULTILINE)
-        filter10 = re.compile('(width=".*?)"', re.S | re.MULTILINE)
-        filter11 = re.compile('(style=\'.*?)\'', re.S | re.MULTILINE)
+        filter1 = re.compile('(class=".*?)"', re.S | re.M)
+        filter2 = re.compile('(data-copyright=".*?)"', re.S | re.M)
+        filter3 = re.compile('(data-ratio=".*?)"', re.S | re.M)
+        filter4 = re.compile('(data-s=".*?)"', re.S | re.M)
+        filter5 = re.compile('(data-type=".*?)"', re.S | re.M)
+        filter6 = re.compile('(data-w=".*?)"', re.S | re.M)
+        filter7 = re.compile('(style=".*?)"', re.S | re.M)
+        filter8 = re.compile('(data-croporisrc=".*?)"', re.S | re.M)
+        filter9 = re.compile('(data-crop.+?=".*?)"', re.S | re.M)
+        filter10 = re.compile('(width=".*?)"', re.S | re.M)
+        filter11 = re.compile('(style=\'.*?)\'', re.S | re.M)
+        filter12 = re.compile('(data-b.*?=.+?)"', re.S | re.M)
 
         text = filter1.sub('', str)
         text = filter2.sub('', text)
@@ -101,13 +144,14 @@ class WeixinParser:
         text = filter9.sub('', text)
         text = filter10.sub('', text)
         text = filter11.sub('', text)
+        text = filter12.sub('', text)
 
         filterText = ' '.join(text.split())
         result = filterText.replace('data-src', 'src')
         result = result.replace('style=""', '')
+        result = result.replace('"', '\'')
 
         return result
-
 
 if __name__ == '__main__':
     p = WeixinParser()
@@ -119,6 +163,7 @@ if __name__ == '__main__':
         data = p.loadHTML(path, url[index])
         info.append(data)
         index += 1
+
 
     jsonObj = json.dumps(info, ensure_ascii=False, indent=4, separators=(',', ': '))
     print(jsonObj)
