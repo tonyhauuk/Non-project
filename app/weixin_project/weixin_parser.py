@@ -1,4 +1,3 @@
-
 from bs4 import BeautifulSoup
 import re, json, uuid
 
@@ -8,7 +7,7 @@ class WeixinParser:
         self.namespace = uuid.NAMESPACE_URL
 
     def loadHTML(self, filePath, url):
-        htmlDoc = open(filePath, 'r', encoding='UTF-8')
+        htmlDoc = open(filePath, 'r', encoding = 'UTF-8')
         htmlStr = htmlDoc.read()
         data = self.parserHTML(htmlStr, url)
         htmlDoc.close()
@@ -16,66 +15,66 @@ class WeixinParser:
 
     def parserHTML(self, htmlDoc, url):
         soup = BeautifulSoup(htmlDoc, 'html.parser')
-        html = soup.find(id='img-content', class_='original_page')
+        html = soup.find(id = 'img-content', class_ = 'original_page')
 
         if html == None:
-            html = soup.find(id='img-content')
+            html = soup.find(id = 'img-content')
             data = self.originHTML(html, soup, url)
         else:
-            html = soup.find(id='img-content', class_='original_page')
+            html = soup.find(id = 'img-content', class_ = 'original_page')
             data = self.sharedHTML(html, soup, url)
 
         return data
 
     def originHTML(self, html, soup, url):
         accountID = accountDesc = ''
-        title = html.find(id='activity-name').get_text().strip()
-        nickname = html.find(class_='profile_nickname').get_text()
-        account = html.find_all('p', class_='profile_meta')
+        title = html.find(id = 'activity-name').get_text().strip()
+        nickname = html.find(class_ = 'profile_nickname').get_text()
+        account = html.find_all('p', class_ = 'profile_meta')
 
         for i in range(len(account)):
-            accountStr = account[i].find('label', class_='profile_meta_label').get_text()
+            accountStr = account[i].find('label', class_ = 'profile_meta_label').get_text()
             if accountStr == '微信号' or accountStr == 'WeChat ID':
-                accountID = account[i].find('span', class_='profile_meta_value').get_text()
+                accountID = account[i].find('span', class_ = 'profile_meta_value').get_text()
                 continue
             elif accountStr == '功能介绍' or accountStr == 'Intro':
-                accountDesc = account[i].find('span', class_='profile_meta_value').get_text()
+                accountDesc = account[i].find('span', class_ = 'profile_meta_value').get_text()
                 continue
 
-        content = html.find('div', id='js_content').prettify()
+        content = html.find('div', id = 'js_content').prettify()
         text = self.retainImgTag(content)
         publishDate = self.getDate(soup)
         uid = self.getUID(title)
 
-        data = dict(uid=uid, title=title, nickname=nickname, accountID=accountID,
-                    accountDesc=accountDesc, url=url, publishData=publishDate,
-                    share=False, text=text)
+        data = dict(uid = uid, title = title, nickname = nickname, accountID = accountID,
+                    accountDesc = accountDesc, url = url, publishData = publishDate,
+                    share = False, text = text)
 
         return data
 
     def sharedHTML(self, html, soup, url):
         accountID = accountDesc = ''
-        title = html.find('div', class_="original_panel_title").get_text().strip()
-        nickname = html.find(class_='account_nickname').get_text().strip()
-        account = html.find_all('p', class_='profile_meta')
+        title = html.find('div', class_ = "original_panel_title").get_text().strip()
+        nickname = html.find(class_ = 'account_nickname').get_text().strip()
+        account = html.find_all('p', class_ = 'profile_meta')
 
         for i in range(len(account)):
-            accountStr = account[i].find('label', class_='profile_meta_label').get_text()
+            accountStr = account[i].find('label', class_ = 'profile_meta_label').get_text()
             if accountStr == '微信号' or accountStr == 'WeChat ID':
-                accountID = account[i].find('span', class_='profile_meta_value').get_text()
+                accountID = account[i].find('span', class_ = 'profile_meta_value').get_text()
                 continue
             elif accountStr == '功能介绍' or accountStr == 'Intro':
-                accountDesc = account[i].find('span', class_='profile_meta_value').get_text()
+                accountDesc = account[i].find('span', class_ = 'profile_meta_value').get_text()
                 continue
 
-        content = html.find('p', id='js_share_notice').prettify()
+        content = html.find('p', id = 'js_share_notice').prettify()
         text = self.retainImgTag(content)
         publishDate = self.getDate(soup)
         uid = self.getUID(title)
 
-        data = dict(uid=uid, title=title, nickname=nickname, accountID=accountID,
-                    accountDesc=accountDesc, url=url, publishData=publishDate,
-                    share=True, text=text)
+        data = dict(uid = uid, title = title, nickname = nickname, accountID = accountID,
+                    accountDesc = accountDesc, url = url, publishData = publishDate,
+                    share = True, text = text)
 
         return data
 
@@ -153,6 +152,7 @@ class WeixinParser:
 
         return result
 
+
 if __name__ == '__main__':
     p = WeixinParser()
     fileList = ['./q1.htm', './q2.html', './w3.html']
@@ -164,6 +164,5 @@ if __name__ == '__main__':
         info.append(data)
         index += 1
 
-
-    jsonObj = json.dumps(info, ensure_ascii=False, indent=4, separators=(',', ': '))
+    jsonObj = json.dumps(info, ensure_ascii = False, indent = 4, separators = (',', ': '))
     print(jsonObj)
