@@ -2,7 +2,10 @@
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
 from urllib.parse import unquote
-# from app.weibo_project.log import Log
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+from log import Log
 
 import re, json, uuid, sys, threading, time
 
@@ -18,17 +21,15 @@ class Weibo:
         password = ''
 
     def loadHTML(self, url, page = 1):
-        # log = Log()
-        # log.create()
-        # log.config()
         info = list()
         self.browser.get(url)
         try:
             # Mock mouse click 'see more'
-            clicks = self.browser.find_elements_by_css_selector('a.WB_text_opt')
+            # clicks = WebDriverWait(self.browser, 10).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'p.comment_txt>a.WB_text_opt')))
+            clicks = self.browser.find_elements_by_css_selector('p.comment_txt>a.WB_text_opt')
             for more in clicks:
                 more.click()
-                time.sleep(0.1)
+                # time.sleep(0.3)
 
             try:
                 feedList = self.browser.find_element_by_css_selector('div#pl_weibo_direct')  # div.search_feed
@@ -51,6 +52,9 @@ class Weibo:
 
     # Parse one of block information
     def blockParse(self, block):
+        log = Log()
+        log.config()
+
         detail = None
         imgUrls = list()
         forwardNumber = commentsNumber = like = 0
@@ -111,7 +115,7 @@ class Weibo:
                     else:
                         # It only has just one single media, one picture or a video frame
                         try:
-                            # Obtain image url
+
                             img = mediaBox.find_element_by_css_selector('ul.WB_media_a>li>img')
                             src = img.get_attribute('src')
                             url = self.replaceBigPic(src)
@@ -127,7 +131,9 @@ class Weibo:
                                 imgUrls = []
                             except (NoSuchElementException, NoSuchAttributeException) as e:
                                 pass
-                except NoSuchElementException:
+                except NoSuchElementException as e:
+                    log.create()
+                    log.record('', nickname, str(e))
                     pass
             try:
                 # Obtain time, timestamp and device id
@@ -235,17 +241,18 @@ class Weibo:
 
     def closed(self):
         self.browser.quit()
-        print('\nBrowser closed !')
+        print('\nBrowser closed !\n')
 
 
 if __name__ == '__main__':
     profile = webdriver.FirefoxProfile()
-    profile.set_preference("browser.privatebrowsing.autostart", True)
+    profile.set_preference('browser.privatebrowsing.autostart', True)
     browser = webdriver.Firefox(firefox_profile = profile)
+    # browser.maximize_window()
 
     process = Weibo(browser)
     try:
-        url = 'http://s.weibo.com/weibo/nvidia%2520rtx'
+        url = 'http://s.weibo.com/weibo/nvidia'
         data = process.loadHTML(url, 1)
         jsonObj = json.dumps(data, ensure_ascii = False, indent = 4, separators = (',', ': '))
         print(jsonObj)

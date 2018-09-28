@@ -6,7 +6,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from log import Log
-
+from selenium.webdriver.common.keys import Keys
 import re, json, uuid, sys, threading, time, datetime, sys
 
 
@@ -15,39 +15,44 @@ class Weibo:
         self.browser = browser
         self.namespace = uuid.NAMESPACE_URL
 
-
     def loadHTML(self, url, page):
-        info = list()
+        info = dict()
 
         if page == 1:
             self.browser.get(url)
             error = self.checkPage()
-
             if 'success' == error:
-                info = self.loadFullPage()
+                one = self.loadFullPage()
+                info[1] = one
             else:
                 info = dict(errno = 1, error = error)
         elif page > 1000:
             for i in range(page):
-                self.browser.get(url + '&page=' + str(i + 1))
-                error = self.checkPage()
-                if 'success' == error:
-                    multi = self.loadFullPage()
-                    info.append(multi)
-                else:
-                    info = dict(errno = 1, error = error)
+                try:
+                    self.browser.get(url + '&page=' + str(i + 1))
+                    error = self.checkPage()
+                    if 'success' == error:
+                        multi = self.loadFullPage()
+                        info[i] = multi
+                    else:
+                        info = dict(errno = 1, error = error)
+                        break
+                except TimeoutException:
                     break
         elif page > 1:
             self.browser.get(url)
             error = self.checkPage()
             for i in range(page):
                 if i == page:
-                    self.closed()
+                    self.browser.close()
                     break
                 if 'success' == error:
                     multi = self.loadFullPage()
-                    info.append(multi)
-                    self.browser.find_element_by_css_selector('a.next').click()
+                    info[i + 1] = multi
+                    try:
+                        self.browser.find_element_by_css_selector('a.next').click()
+                    except NoSuchElementException:
+                        break
                 else:
                     info = dict(errno = 1, error = error)
                     break
@@ -55,13 +60,20 @@ class Weibo:
         return info
 
     def loadFullPage(self):
-        info = list()
+        info = dict()
         try:
-            # Mock mouse click 'see more'
-            clicks = WebDriverWait(self.browser, 1).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'p.txt a[action-type="fl_unfold"]')))
-            # clicks = self.browser.find_elements_by_css_selector('p.txt a[action-type="fl_unfold"]')
-            for more in clicks:
-                more.click()
+            try:
+                # Mock mouse click 'see more'
+                clicks = WebDriverWait(self.browser, 1).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'p.txt a[action-type="fl_unfold"]')))
+                # clicks = self.browser.find_elements_by_css_selector('p.txt a[action-type="fl_unfold"]')
+                for more in clicks:
+                    more.click()
+            except:
+                pass
+
+            # Scroll to the bottom
+            # self.browser.execute_script('window.scrollTo(0, document.body.scrollHeight)')
+            self.browser.find_element_by_xpath('/html/body').send_keys(Keys.END)
 
             try:
                 feedList = self.browser.find_element_by_css_selector('div.m-wrap div#pl_feedlist_index')
@@ -71,11 +83,12 @@ class Weibo:
                 return data
 
             blocks = feedList.find_elements_by_css_selector('div div.card-wrap')
-        except NoSuchElementException as e:
+        except NoSuchElementException:
             data = dict(errno = 3, error = 'Web page can not open')
 
             return data
         else:
+            i = 1
             for block in blocks:
                 try:
                     mid = block.get_attribute('mid')
@@ -85,7 +98,8 @@ class Weibo:
                     continue
                 else:
                     data = self.blockParse(block)
-                    info.append(data)
+                    info[i] = data
+                    i += 1
 
         return info
 
@@ -139,7 +153,7 @@ class Weibo:
                         contentLink = self.getContentLink(text)
                 except NoSuchElementException:
                     content = ''
-                    contentLink = ''
+                    contentLink = list()
 
             try:
                 media = detail.find_element_by_css_selector('div.content div[node-type="feed_list_media_prev"]')
@@ -293,8 +307,6 @@ class Weibo:
 
     def quit(self):
         self.browser.quit()
-
-
 
 
 if __name__ == '__main__':
