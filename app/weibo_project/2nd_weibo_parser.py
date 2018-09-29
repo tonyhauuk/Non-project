@@ -5,7 +5,7 @@ from urllib.parse import unquote
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-from log import Log
+# from log import Log
 from selenium.webdriver.common.keys import Keys
 import re, json, uuid, sys, threading, time, datetime, sys
 
@@ -17,10 +17,12 @@ class Weibo:
 
     def loadHTML(self, url, page):
         info = dict()
+        if page < 1:
+            page = 1
 
         if page == 1:
             self.browser.get(url)
-            error = self.checkPage()
+            error = self.checkResult()
             if 'success' == error:
                 one = self.loadFullPage()
                 info[1] = one
@@ -30,7 +32,7 @@ class Weibo:
             for i in range(page):
                 try:
                     self.browser.get(url + '&page=' + str(i + 1))
-                    error = self.checkPage()
+                    error = self.checkResult()
                     if 'success' == error:
                         multi = self.loadFullPage()
                         info[i] = multi
@@ -41,7 +43,7 @@ class Weibo:
                     break
         elif page > 1:
             self.browser.get(url)
-            error = self.checkPage()
+            error = self.checkResult()
             for i in range(page):
                 if i == page:
                     self.browser.close()
@@ -64,9 +66,9 @@ class Weibo:
         try:
             try:
                 # Mock mouse click 'see more'
-                clicks = WebDriverWait(self.browser, 1).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'p.txt a[action-type="fl_unfold"]')))
+                allClick = WebDriverWait(self.browser, 1).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'p.txt a[action-type="fl_unfold"]')))
                 # clicks = self.browser.find_elements_by_css_selector('p.txt a[action-type="fl_unfold"]')
-                for more in clicks:
+                for more in allClick:
                     more.click()
             except:
                 pass
@@ -106,9 +108,9 @@ class Weibo:
     # Parse one of block information
     def blockParse(self, block):
         detail = block
-        imgUrls = list()
+        imgUrls = contentLink = list()
         forwardNumber = commentsNumber = like = 0
-        nickname = verify = avatar = video = id = userID = time = content = deviceID = contentLink = ''
+        nickname = verify = avatar = video = id = userID = date = content = deviceID  = ''
 
         try:
             mid = detail.get_attribute('mid')
@@ -135,9 +137,9 @@ class Weibo:
                     elif 'icon-vip-y' in approve or 'icon-vip-g' in approve:
                         verify = '微博个人认证'
 
-                except (NoSuchAttributeException, NoSuchElementException) as e:
+                except (NoSuchAttributeException, NoSuchElementException):
                     verify = ''
-            except NoSuchElementException as e:
+            except NoSuchElementException:
                 pass
 
             try:
@@ -152,8 +154,18 @@ class Weibo:
                         content = self.contentFilter(text)
                         contentLink = self.getContentLink(text)
                 except NoSuchElementException:
-                    content = ''
-                    contentLink = list()
+                    try:
+                        text = detail.find_element_by_css_selector('div.content p.txt')
+                        content = self.contentFilter(text)
+                        contentLink = self.getContentLink(text)
+                    except NoSuchElementException:
+                       try:
+                           txt = detail.find_elements_by_css_selector('p[node-type="feed_list_content"]')
+                           text = txt[0]
+                           content = self.contentFilter(text)
+                           contentLink = self.getContentLink(text)
+                       except NoSuchElementException:
+                           pass
 
             try:
                 media = detail.find_element_by_css_selector('div.content div[node-type="feed_list_media_prev"]')
@@ -166,7 +178,7 @@ class Weibo:
                     src = a.get_attribute('action-data')
                     if mid in src:
                         video = self.getVideoLink(src)
-                except (NoSuchElementException, NoSuchAttributeException) as e:
+                except (NoSuchElementException, NoSuchAttributeException):
                     # Pictures list display, one picture or picture list
                     try:
                         div = media.find_element_by_css_selector('div.media-piclist')
@@ -177,7 +189,7 @@ class Weibo:
                                 src = img.find_element_by_tag_name('img').get_attribute('src')  # Obtain image url
                                 url = self.replaceBigPic(src)
                                 imgUrls.append(url)
-                    except (NoSuchElementException, NoSuchAttributeException) as e:
+                    except (NoSuchElementException, NoSuchAttributeException):
                         pass
 
             try:
@@ -187,43 +199,52 @@ class Weibo:
                 num = length - 1
                 timeInfo = polymerization[num].find_element_by_css_selector('a[target="_blank"]').text
                 if '年' in timeInfo:
-                    time = timeInfo
+                    date = timeInfo
+                elif '今天' in timeInfo:
+                    date = self.calcDate(timeInfo, 'day')
+                elif '分钟前' in timeInfo:
+                    date = self.calcDate(timeInfo, 'minute')
+                elif '秒前' in timeInfo:
+                    date = self.calcDate(timeInfo, 'second')
                 else:
                     year = str(datetime.datetime.now().year) + '年'
-                    time = year + timeInfo
+                    date = year + timeInfo
                 try:
                     deviceID = polymerization[num].find_element_by_css_selector('a[rel="nofollow"]').text
                 except NoSuchElementException:
                     pass
-            except (NoSuchElementException, NoSuchAttributeException) as e:
+            except (NoSuchElementException, NoSuchAttributeException):
                 pass
 
             try:
                 feedAction = detail.find_element_by_css_selector('div.card div.card-act')
-                li = feedAction.find_elements_by_tag_name('li a')
-
-                # Forward number
-                forward = li[1].text
-                forwardNumber = 0 if forward.isalnum() else self.getDigit(forward)
-
-                # Comments number
-                comments = li[2].text
-                commentsNumber = 0 if comments.isalnum() else self.getDigit(comments)
-
-                # Like number
-                likes = li[3].find_element_by_tag_name('em').text
-                like = 0 if likes == '' else self.getDigit(likes)
-
             except NoSuchElementException:
                 pass
-            data = dict(id = id, userID = userID, avatar = avatar, nickname = nickname, verification = verify,
-                        text = content, contentLink = contentLink, time = time,
-                        deviceID = deviceID, forwardNumber = forwardNumber, commentsNumber = commentsNumber,
-                        like = like, video = video, imgUrls = imgUrls)
+            else:
+                try:
+                    li = feedAction.find_elements_by_tag_name('li a')
+                    # Forward number
+                    forward = li[1].text
+                    forwardNumber = 0 if forward.isalnum() else self.getDigit(forward)
+
+                    # Comments number
+                    comments = li[2].text
+                    commentsNumber = 0 if comments.isalnum() else self.getDigit(comments)
+
+                    # Like number
+                    likes = li[3].find_element_by_tag_name('em').text
+                    like = 0 if likes == '' else self.getDigit(likes)
+
+                except NoSuchElementException:
+                    pass
+
+            data = dict(id = id, userID = userID, avatar = avatar, nickname = nickname, verification = verify, text = content,
+                        contentLink = contentLink, time = date, deviceID = deviceID, forwardNumber = forwardNumber,
+                        commentsNumber = commentsNumber, like = like, video = video, imgUrls = imgUrls)
 
             return data
-        except NoSuchElementException as e:
-            print('Can not find block info, error: ' + str(e))
+        except NoSuchElementException:
+            pass
 
     def replaceBigPic(self, src):
         url = src.replace('thumb150', 'bmiddle')
@@ -294,13 +315,37 @@ class Weibo:
 
         return number
 
-    def checkPage(self):
+    def checkResult(self):
         try:
             error = self.browser.find_element_by_css_selector('div.card-wrap div.card-no-result p').text
         except NoSuchElementException:
             error = 'success'
 
         return error
+
+    def calcDate(self, timeInfo, category):
+        getTime = datetime.datetime.now()
+        year = getTime.year
+        month = getTime.month
+        day = getTime.day
+        date = ''
+
+        if  category == 'day':
+            string = timeInfo.replace('今天', ' ')
+            date = str(year) + '年' + str(month) + '月' + str(day) + '日' + string
+        elif category == 'minute':
+            before = self.getDigit(timeInfo)
+            currentTime = int(time.time())
+            second = before * 60
+            real = currentTime - second
+            local = time.localtime(real)
+            date = time.strftime('%Y年%m月%d日 %H:%M', local)
+        elif category == 'second':
+            currentTime = int(time.time())
+            local = time.localtime(currentTime)
+            date = time.strftime('%Y年%m月%d日 %H:%M', local)
+
+        return date
 
     def closed(self):
         self.browser.close()
@@ -334,7 +379,7 @@ if __name__ == '__main__':
             data = process.loadHTML(url, page)
             jsonObj = json.dumps(data, ensure_ascii = False, indent = 4, separators = (',', ': '))
             print(jsonObj)
-        except TimeoutException as e:
+        except TimeoutException:
             data = dict(errno = 6, error = 'The connection has timed out!')
             jsonObj = json.dumps(data, ensure_ascii = False, indent = 4, separators = (',', ': '))
             print(jsonObj)
