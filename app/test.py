@@ -1,12 +1,70 @@
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
-import json
+import json, time
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
 
+a = dict()
+b = dict(a=1, b=2)
+c = dict()
+i = 0
+while True:
+    i += 1
+    if i == 10:
+        break
+    for j in range(3):
+        a[j] = b
+        c.update(b)
+
+
+d = dict(b , **b)
+print(d)
+
+exit()
+a = dict(a = 'dddd', b='22222')
+b = dict(error = 0, data = a)
+c = True
+i = 0
+t = time.time()
+while c:
+    # a.popitem()
+    i += 1
+    print(i)
+
+    if i == 100:
+        c = False
+
+print('----------------------')
+print(time.time() - t)
+
+# jsonObj = json.dumps(b, ensure_ascii = False, indent = 4, separators = (',', ': '))
+# print(jsonObj)
+
+
+
+
+
+
+
+
+
+
+
+def isOneDay(date):
+    array = time.strptime(date, '%Y年%m月%d日 %H:%M')
+    st = time.mktime(array)
+    oneDay = 24 * 60 * 60
+    diff = int(time.time()) - int(st)
+    print(diff)
+    if diff < oneDay:
+        return True
+    else:
+        return False
+
+print(type(isOneDay('2018年10月29日 21:25')))
 
 
 import datetime, time
@@ -24,7 +82,7 @@ dt = time.strftime('%Y年%m月%d日 %H:%M', local)
 print(dt)
 
 
-exit()
+
 
 
 
