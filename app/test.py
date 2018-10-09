@@ -7,21 +7,21 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
 
-a = dict()
-b = dict(a=1, b=2)
-c = dict()
-i = 0
+
+
+
+
+
+i = 1
+t = True
 while True:
-    i += 1
-    if i == 10:
+    if i == 5:
         break
-    for j in range(3):
-        a[j] = b
-        c.update(b)
+    print('i: ' + str(i))
+    i += 1
 
 
-d = dict(b , **b)
-print(d)
+
 
 exit()
 a = dict(a = 'dddd', b='22222')

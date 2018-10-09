@@ -20,15 +20,15 @@ class Weibo:
 
 
     # Return latest weibo in 24 hours
-    def parseHTML(self, url):
-        info, all = dict(), dict()
-        self.browser.get(url)
+    def parseHTML(self, link):
+        allInfo = dict()
+        self.browser.get(link)
         error = self.checkResult()
         j = 0
+        info = dict()
 
         if error == 'success':
-            while self.status:
-                # multi = self.loadFullPage()
+            while True:
                 try:
                     try:
                         # Mock mouse click 'see more'
@@ -60,90 +60,28 @@ class Weibo:
                             continue
                         else:
                             try:
-                                # block.find_element_by_tag_name('h4')
                                 data = self.blockParse(block)
-                                if not self.status:
-                                    continue
-                                else:
+                                if self.status:
                                     info[i] = data
                                     i += 1
                             except NoSuchElementException:
                                pass
 
-                    if len(info) == 0:
-                        break
-                # info[i] = multi
-                all[j] = info
+                if len(info) == 0:
+                    break
+
+                allInfo[j] = info
                 try:
                     self.browser.find_element_by_css_selector('a.next').click()
                 except NoSuchElementException:
                     break
                 j += 1
-
+                info = {}
         else:
-            info = dict(errno = 1, error = error)
+            allInfo = dict(errno = 1, error = error)
 
-        return all
-    '''
-    def loadFullPage(self):
-        info = dict()
-        try:
-            try:
-                # Mock mouse click 'see more'
-                allClick = WebDriverWait(self.browser, 1).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'p.txt a[action-type="fl_unfold"]')))
-                # clicks = self.browser.find_elements_by_css_selector('p.txt a[action-type="fl_unfold"]')
-                for more in allClick:
-                    more.click()
-            except:
-                pass
+        return allInfo
 
-            # Scroll to the bottom
-            # self.browser.execute_script('window.scrollTo(0, document.body.scrollHeight)')
-            self.browser.find_element_by_xpath('/html/body').send_keys(Keys.END)
-
-            try:
-                feedList = self.browser.find_element_by_css_selector('div.m-wrap div#pl_feedlist_index')
-            except NoSuchElementException:
-                data = dict(errno = 2, error = 'Not found feed list tag !')
-
-                return data
-
-            blocks = feedList.find_elements_by_css_selector('div div.card-wrap')
-        except NoSuchElementException:
-            data = dict(errno = 3, error = 'Web page can not open')
-
-            return data
-        else:
-            i = 1
-            for block in blocks:
-                try:
-                    mid = block.get_attribute('mid')
-                    if not mid:
-                        continue
-                except NoSuchAttributeException:
-                    continue
-                else:
-                    try:
-                        block.find_element_by_tag_name('h4')
-                        if not self.status:
-                            continue
-                        else:
-                            data = self.blockParse(block)
-                            info[i] = data
-                            i += 1
-                    except NoSuchElementException:
-                        if not self.status:
-                            self.status = self.isOneDay()
-                            continue
-                        else:
-                            data = self.blockParse(block)
-                            info[i] = data
-                            i += 1
-                        # self.status = self.isOneDay()
-                        # print(self.status)
-
-        return info
-    '''
     # Parse one of block information
     def blockParse(self, block):
         detail = block
@@ -440,6 +378,5 @@ if __name__ == '__main__':
             jsonObj = json.dumps(data, ensure_ascii = False, indent = 4, separators = (',', ': '))
             print(jsonObj)
         finally:
-            exit()
             process.closed()
 
