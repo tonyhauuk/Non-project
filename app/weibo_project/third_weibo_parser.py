@@ -87,7 +87,7 @@ class Weibo:
         detail = block
         imgUrls = contentLink = list()
         forwardNumber = commentsNumber = like = 0
-        nickname = verify = avatar = video = id = userID = date = content = deviceID  = url = ''
+        nickname = verify = avatar = video = id = userID = date = content = deviceID  = contentUrl = ''
 
         try:
             mid = detail.get_attribute('mid')
@@ -114,7 +114,8 @@ class Weibo:
                 self.date = date
                 self.status = self.isOneDay()
 
-                url = polymerization[num].find_element_by_tag_name('a').get_attribute('href')
+                contentUrl = polymerization[num].find_element_by_tag_name('a').get_attribute('href')
+                contentUrl = self.urlFilter(contentUrl)
                 try:
                     deviceID = polymerization[num].find_element_by_css_selector('a[rel="nofollow"]').text
                 except NoSuchElementException:
@@ -227,7 +228,7 @@ class Weibo:
                         pass
 
                 data = dict(id = id, userID = userID, avatar = avatar, nickname = nickname, verification = verify, text = content,
-                            contentLink = contentLink, time = date, url = url, deviceID = deviceID, forwardNumber = forwardNumber,
+                            contentLink = contentLink, time = date, url = contentUrl, deviceID = deviceID, forwardNumber = forwardNumber,
                             commentsNumber = commentsNumber, like = like, video = video, imgUrls = imgUrls)
 
                 return data
@@ -270,6 +271,12 @@ class Weibo:
                     content = content.replace(s, '')
 
         return content.strip()
+
+    def urlFilter(self, url):
+        contentUrl = url.split('?refer')
+        result = contentUrl[0]
+
+        return result
 
     def getContentLink(self, text):
         href = list()
