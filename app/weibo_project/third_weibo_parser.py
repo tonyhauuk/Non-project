@@ -7,7 +7,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 # from log import Log
 from selenium.webdriver.common.keys import Keys
-import re, json, uuid, sys, threading, time, datetime, sys
+import re, json, uuid,  time, datetime, sys
 
 
 class Weibo:
@@ -33,7 +33,6 @@ class Weibo:
                     try:
                         # Mock mouse click 'see more'
                         allClick = WebDriverWait(self.browser, 1).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'p.txt a[action-type="fl_unfold"]')))
-                        # clicks = self.browser.find_elements_by_css_selector('p.txt a[action-type="fl_unfold"]')
                         for more in allClick:
                             more.click()
                     except:
@@ -44,7 +43,7 @@ class Weibo:
                     try:
                         feedList = self.browser.find_element_by_css_selector('div.m-wrap div#pl_feedlist_index')
                     except NoSuchElementException:
-                        return dict(errno = 2, error = 'Not found feed list tag !')
+                        return dict(errno = 2, error = 'No results!')
 
                     blocks = feedList.find_elements_by_css_selector('div div.card-wrap')
                 except NoSuchElementException:
@@ -70,6 +69,9 @@ class Weibo:
                 if len(info) == 0:
                     break
 
+                if len(allInfo) == 0:
+                    break
+
                 allInfo[j] = info
                 try:
                     self.browser.find_element_by_css_selector('a.next').click()
@@ -87,7 +89,7 @@ class Weibo:
         detail = block
         imgUrls = contentLink = list()
         forwardNumber = commentsNumber = like = 0
-        nickname = verify = avatar = video = id = userID = date = content = deviceID  = contentUrl = ''
+        nickname = verify = avatar = video = uid = userID = date = content = deviceID  = contentUrl = ''
 
         try:
             mid = detail.get_attribute('mid')
@@ -135,7 +137,7 @@ class Weibo:
                     profile = detail.find_element_by_css_selector('div.content div.info')
                     nickname = profile.find_element_by_css_selector('a.name').text
                     userID = self.getUserID(profile.find_element_by_css_selector('a.name').get_attribute('href'))
-                    id = self.getUID(userID)
+                    uid = self.getUID(userID)
 
                     # If does not match this tag, then verification is null
                     try:
@@ -227,7 +229,7 @@ class Weibo:
                     except NoSuchElementException:
                         pass
 
-                data = dict(id = id, userID = userID, avatar = avatar, nickname = nickname, verification = verify, text = content,
+                data = dict(id = uid, userID = userID, avatar = avatar, nickname = nickname, verification = verify, text = content,
                             contentLink = contentLink, time = date, url = contentUrl, deviceID = deviceID, forwardNumber = forwardNumber,
                             commentsNumber = commentsNumber, like = like, video = video, imgUrls = imgUrls)
 
@@ -343,13 +345,16 @@ class Weibo:
         return date
 
     def isOneDay(self):
-        array = time.strptime(self.date, '%Y年%m月%d日 %H:%M')
-        st = time.mktime(array)
-        oneDay = 24 * 60 * 60
-        diff = self.timestamp - int(st)
-        if diff < oneDay:
-            return True
-        else:
+        try:
+            array = time.strptime(self.date, '%Y年%m月%d日 %H:%M')
+            st = time.mktime(array)
+            oneDay = 24 * 60 * 60
+            diff = self.timestamp - int(st)
+            if diff < oneDay:
+                return True
+            else:
+                return False
+        except ValueError:
             return False
 
     def closed(self):
@@ -363,8 +368,8 @@ if __name__ == '__main__':
     try:
         keyword = sys.argv[1]
     except IndexError:
-        data = dict(errno = 4, error = 'Argument is missing')
-        jsonObj = json.dumps(data, ensure_ascii = False, indent = 4, separators = (',', ': '))
+        obj = dict(errno = 4, error = 'Argument is missing')
+        jsonObj = json.dumps(obj, ensure_ascii = False, indent = 4, separators = (',', ': '))
         print(jsonObj)
     else:
         profile = webdriver.FirefoxProfile()
@@ -377,13 +382,12 @@ if __name__ == '__main__':
 
         try:
             url = 'https://s.weibo.com/weibo?q=' + keyword
-            data = process.parseHTML(url)
-            jsonObj = json.dumps(data, ensure_ascii = False, indent = 4, separators = (',', ': '))
+            obj = process.parseHTML(url)
+            jsonObj = json.dumps(obj, ensure_ascii = False, indent = 4, separators = (',', ': '))
             print(jsonObj)
         except TimeoutException:
-            data = dict(errno = 6, error = 'The connection has timed out!')
-            jsonObj = json.dumps(data, ensure_ascii = False, indent = 4, separators = (',', ': '))
+            obj = dict(errno = 6, error = 'The connection has timed out!')
+            jsonObj = json.dumps(obj, ensure_ascii = False, indent = 4, separators = (',', ': '))
             print(jsonObj)
         finally:
             process.closed()
-
