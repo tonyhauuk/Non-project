@@ -69,16 +69,18 @@ class Weibo:
                 if len(info) == 0:
                     break
 
+                allInfo[j] = info
                 if len(allInfo) == 0:
+                    allInfo = dict(errno = 1, error = 'No results!')
                     break
 
-                allInfo[j] = info
                 try:
                     self.browser.find_element_by_css_selector('a.next').click()
                 except NoSuchElementException:
                     break
                 j += 1
                 info = {}
+
         else:
             allInfo = dict(errno = 1, error = error)
 
@@ -93,7 +95,6 @@ class Weibo:
 
         try:
             mid = detail.get_attribute('mid')
-
             # If out of 24 hours, then skip blow if code
             try:
                 # Obtain time, timestamp and device id
