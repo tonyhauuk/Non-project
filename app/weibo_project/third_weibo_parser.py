@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
+from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException, StaleElementReferenceException, WebDriverException
 from urllib.parse import unquote
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-# from log import Log
 from selenium.webdriver.common.keys import Keys
 import re, json, uuid,  time, datetime, sys
 
@@ -33,6 +32,7 @@ class Weibo:
                     try:
                         # Mock mouse click 'see more'
                         allClick = WebDriverWait(self.browser, 1).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'p.txt a[action-type="fl_unfold"]')))
+                        # allClick = self.browser.find_elements_by_css_selector('p.txt a[action-type="fl_unfold"]')
                         for more in allClick:
                             more.click()
                     except:
@@ -376,8 +376,8 @@ if __name__ == '__main__':
         print(jsonObj)
     else:
         opts = webdriver.FirefoxOptions()
-        # opts.add_argument('--headless') # Headless browser
-        # opts.add_argument('--disable-gpu')  # Disable gpu acceleration
+        opts.add_argument('--headless') # Headless browser
+        opts.add_argument('--disable-gpu')  # Disable gpu acceleration
         profile = webdriver.FirefoxProfile()
         profile.set_preference('browser.privatebrowsing.autostart', True) # Start a private browsing
         browser = webdriver.Firefox(firefox_profile = profile, firefox_options = opts)
@@ -387,9 +387,18 @@ if __name__ == '__main__':
         try:
             url = 'https://s.weibo.com/weibo?q=' + keyword
             obj = process.parseHTML(url)
+            browser.set_page_load_timeout(5)
             jsonObj = json.dumps(obj, ensure_ascii = False, indent = 4, separators = (',', ': '))
             print(jsonObj)
         except TimeoutException:
+            obj = dict(errno = 6, error = 'The connection has timed out!')
+            jsonObj = json.dumps(obj, ensure_ascii = False, indent = 4, separators = (',', ': '))
+            print(jsonObj)
+        except StaleElementReferenceException:
+            obj = dict(errno = 6, error = 'The connection has timed out!')
+            jsonObj = json.dumps(obj, ensure_ascii = False, indent = 4, separators = (',', ': '))
+            print(jsonObj)
+        except WebDriverException:
             obj = dict(errno = 6, error = 'The connection has timed out!')
             jsonObj = json.dumps(obj, ensure_ascii = False, indent = 4, separators = (',', ': '))
             print(jsonObj)
