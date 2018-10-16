@@ -178,7 +178,9 @@ class Weibo:
                                content = self.contentFilter(text)
                                contentLink = self.getContentLink(text)
                            except NoSuchElementException:
-                               pass
+                               text = detail.find_element_by_css_selector('p[node-type="feed_list_content"_full]')
+                               content = self.contentFilter(text)
+                               contentLink = self.getContentLink(text)
 
                 try:
                     media = detail.find_element_by_css_selector('div.content div[node-type="feed_list_media_prev"]')
@@ -373,14 +375,15 @@ if __name__ == '__main__':
         jsonObj = json.dumps(obj, ensure_ascii = False, indent = 4, separators = (',', ': '))
         print(jsonObj)
     else:
+        opts = webdriver.FirefoxOptions()
+        # opts.add_argument('--headless') # Headless browser
+        # opts.add_argument('--disable-gpu')  # Disable gpu acceleration
         profile = webdriver.FirefoxProfile()
-        profile.set_preference('browser.privatebrowsing.autostart', True)
-        browser = webdriver.Firefox(firefox_profile = profile)
-        # browser.maximize_window()
+        profile.set_preference('browser.privatebrowsing.autostart', True) # Start a private browsing
+        browser = webdriver.Firefox(firefox_profile = profile, firefox_options = opts)
 
         timestamp = int(time.time())
         process = Weibo(browser, timestamp)
-
         try:
             url = 'https://s.weibo.com/weibo?q=' + keyword
             obj = process.parseHTML(url)
