@@ -376,8 +376,8 @@ if __name__ == '__main__':
         print(jsonObj)
     else:
         opts = webdriver.FirefoxOptions()
-        opts.add_argument('--headless') # Headless browser
-        opts.add_argument('--disable-gpu')  # Disable gpu acceleration
+        # opts.add_argument('--headless') # Headless browser
+        # opts.add_argument('--disable-gpu')  # Disable gpu acceleration
         profile = webdriver.FirefoxProfile()
         profile.set_preference('browser.privatebrowsing.autostart', True) # Start a private browsing
         browser = webdriver.Firefox(firefox_profile = profile, firefox_options = opts)
@@ -390,15 +390,7 @@ if __name__ == '__main__':
             browser.set_page_load_timeout(5)
             jsonObj = json.dumps(obj, ensure_ascii = False, indent = 4, separators = (',', ': '))
             print(jsonObj)
-        except TimeoutException:
-            obj = dict(errno = 6, error = 'The connection has timed out!')
-            jsonObj = json.dumps(obj, ensure_ascii = False, indent = 4, separators = (',', ': '))
-            print(jsonObj)
-        except StaleElementReferenceException:
-            obj = dict(errno = 6, error = 'The connection has timed out!')
-            jsonObj = json.dumps(obj, ensure_ascii = False, indent = 4, separators = (',', ': '))
-            print(jsonObj)
-        except WebDriverException:
+        except (TimeoutException, StaleElementReferenceException, WebDriverException):
             obj = dict(errno = 6, error = 'The connection has timed out!')
             jsonObj = json.dumps(obj, ensure_ascii = False, indent = 4, separators = (',', ': '))
             print(jsonObj)
