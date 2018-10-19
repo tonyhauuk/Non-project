@@ -39,7 +39,7 @@ class Weibo:
                         pass
 
                     # Scroll to the bottom
-                    self.browser.find_element_by_xpath('/html/body').send_keys(Keys.END)
+                    # self.browser.find_element_by_xpath('/html/body').send_keys(Keys.END)
                     try:
                         feedList = self.browser.find_element_by_css_selector('div.m-wrap div#pl_feedlist_index')
                     except NoSuchElementException:
@@ -211,12 +211,12 @@ class Weibo:
                 Move Obtain time, timestamp and device id code to above
                 '''
                 try:
-                    feedAction = detail.find_element_by_css_selector('div.card div.card-act')
+                    feedAction = detail.find_element_by_css_selector('div.card div.card-act ul')
                 except NoSuchElementException:
                     pass
                 else:
                     try:
-                        li = feedAction.find_elements_by_tag_name('li a')
+                        li = feedAction.find_elements_by_css_selector('li a')
                         # Forward number
                         forward = li[1].text
                         forwardNumber = 0 if forward.isalnum() else self.getDigit(forward)
@@ -395,4 +395,4 @@ if __name__ == '__main__':
             jsonObj = json.dumps(obj, ensure_ascii = False, indent = 4, separators = (',', ': '))
             print(jsonObj)
         finally:
-            process.closed()
+            pass
