@@ -21,7 +21,9 @@ class Weibo:
     def parseHTML(self, link):
         allInfo, info = dict(), dict()
         try:
+            o1= time.time()
             self.browser.get(link)
+            print('\n'+str(time.time()-o1)+ 's\' first open  -------\n')
         except:
             return dict(errno = 2, error = 'Page can not open')
         else:
@@ -33,7 +35,7 @@ class Weibo:
                     try:
                         try:
                             # Mock mouse click 'see more'
-                            allClick = WebDriverWait(self.browser, 1).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'p.txt>a[action-type="fl_unfold"]')))
+                            allClick = WebDriverWait(self.browser, 1).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'p.txt a[action-type="fl_unfold"]')))
                             # allClick = self.browser.find_elements_by_css_selector('p.txt a[action-type="fl_unfold"]')
                             for more in allClick:
                                 more.click()
@@ -43,11 +45,11 @@ class Weibo:
                         # Scroll to the bottom
                         self.browser.find_element_by_xpath('/html/body').send_keys(Keys.END)
                         try:
-                            feedList = self.browser.find_element_by_css_selector('div.m-wrap>div#pl_feedlist_index')
+                            feedList = self.browser.find_element_by_css_selector('div.m-wrap div#pl_feedlist_index')
                         except NoSuchElementException:
                             return dict(errno = 2, error = 'No results!')
 
-                        blocks = feedList.find_elements_by_css_selector('div>div.card-wrap')
+                        blocks = feedList.find_elements_by_css_selector('div div.card-wrap')
                     except NoSuchElementException:
                         return dict(errno = 3, error = 'Web page can not open')
                     else:
@@ -60,7 +62,9 @@ class Weibo:
                             except NoSuchAttributeException:
                                 continue
                             else:
+                                p1=time.time()
                                 data = self.blockParse(block)
+                                print('\n'+str(time.time()-p1)+'s\'  parse one block \n')
                                 if self.status:
                                     info[i] = data
                                     i += 1
@@ -71,10 +75,13 @@ class Weibo:
                     elif len(info) == 0:
                         break
                     else:
+                        aa1=time.time()
                         allInfo[j] = info
-
+                        print('\n'+str(time.time()-aa1)+'s\'   append allInfo to dict')
                     try:
+                        f1=time.time()
                         self.browser.find_element_by_css_selector('a.next').click()
+                        print('\n'+str(time.time()-f1)+'s\' flip page time used \n')
                     except NoSuchElementException:
                         break
                     j += 1
@@ -127,14 +134,14 @@ class Weibo:
 
             if self.status:
                 try:
-                    avatarTag = detail.find_element_by_css_selector('div.card-feed>div.avator>a>img')
+                    avatarTag = detail.find_element_by_css_selector('div.card-feed div.avator a img')
                 except NoSuchElementException:
                     pass
                 else:
                     avatar = avatarTag.get_attribute('src')
 
                 try:
-                    profile = detail.find_element_by_css_selector('div.content>div.info')
+                    profile = detail.find_element_by_css_selector('div.content div.info')
                     nickname = profile.find_element_by_css_selector('a.name').text
                     userID = self.getUserID(profile.find_element_by_css_selector('a.name').get_attribute('href'))
                     uid = self.getUID(userID)
@@ -155,19 +162,19 @@ class Weibo:
                     pass
 
                 try:
-                    text = detail.find_element_by_css_selector('div.content>p[node-type="feed_list_content_full"]')
+                    text = detail.find_element_by_css_selector('div.content p[node-type="feed_list_content_full"]')
                     if text.get_attribute('nick-name') == nickname:
                         content = self.contentFilter(text)
                         contentLink = self.getContentLink(text)
                 except NoSuchElementException:
                     try:
-                        text = detail.find_element_by_css_selector('div.content>p[node-type="feed_list_content"]')
+                        text = detail.find_element_by_css_selector('div.content p[node-type="feed_list_content"]')
                         if text.get_attribute('nick-name') == nickname:
                             content = self.contentFilter(text)
                             contentLink = self.getContentLink(text)
                     except NoSuchElementException:
                         try:
-                            text = detail.find_element_by_css_selector('div.content>p.txt')
+                            text = detail.find_element_by_css_selector('div.content p.txt')
                             content = self.contentFilter(text)
                             contentLink = self.getContentLink(text)
                         except NoSuchElementException:
@@ -182,13 +189,13 @@ class Weibo:
                                 contentLink = self.getContentLink(text)
 
                 try:
-                    media = detail.find_element_by_css_selector('div.content>div[node-type="feed_list_media_prev"]')
+                    media = detail.find_element_by_css_selector('div.content div[node-type="feed_list_media_prev"]')
                 except NoSuchElementException:
                     pass
                 else:
                     # Obtain video url
                     try:
-                        a = media.find_element_by_css_selector('div.thumbnail>a.WB_video_h5')
+                        a = media.find_element_by_css_selector('div.thumbnail a.WB_video_h5')
                         src = a.get_attribute('action-data')
                         if mid in src:
                             video = self.getVideoLink(src)
@@ -210,12 +217,12 @@ class Weibo:
                 Move Obtain time, timestamp and device id code to above
                 '''
                 try:
-                    feedAction = detail.find_element_by_css_selector('div.card>div.card-act>ul')
+                    feedAction = detail.find_element_by_css_selector('div.card div.card-act ul')
                 except NoSuchElementException:
                     pass
                 else:
                     try:
-                        li = feedAction.find_elements_by_css_selector('li>a')
+                        li = feedAction.find_elements_by_css_selector('li a')
                         # Forward number
                         forward = li[1].text
                         forwardNumber = 0 if forward.isalnum() else self.getDigit(forward)
@@ -374,20 +381,24 @@ if __name__ == '__main__':
         jsonObj = json.dumps(obj, ensure_ascii = False, indent = 4, separators = (',', ': '))
         print(jsonObj)
     else:
+        b1= time.time()
         opts = webdriver.FirefoxOptions()
-        # opts.add_argument('--headless')       # Headless browser
-        # opts.add_argument('--disable-gpu')    # Disable gpu acceleration
+        opts.add_argument('--headless')       # Headless browser
+        opts.add_argument('--disable-gpu')    # Disable gpu acceleration
         profile = webdriver.FirefoxProfile()
         profile.set_preference('browser.privatebrowsing.autostart', True)  # Start a private browsing
         browser = webdriver.Firefox(firefox_profile = profile, firefox_options = opts)
+        print('\n'+str(time.time()-b1)+'s\' open browser used time\n')
 
         timestamp = int(time.time())
         process = Weibo(browser, timestamp)
         try:
             url = 'https://s.weibo.com/weibo?q=' + keyword
+            t1 = int(time.time())
             obj = process.parseHTML(url)
             jsonObj = json.dumps(obj, ensure_ascii = False, indent = 4, separators = (',', ': '))
-            print(jsonObj)
+            print('\n'+str(int(time.time())-t1)+'s\' build json and parse finished!\n')
+            # print(jsonObj)
         except (TimeoutException, StaleElementReferenceException, WebDriverException):
             obj = dict(errno = 6, error = 'The connection has timed out!')
             jsonObj = json.dumps(obj, ensure_ascii = False, indent = 4, separators = (',', ': '))
