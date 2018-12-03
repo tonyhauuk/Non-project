@@ -126,6 +126,7 @@ class Weibo:
                 pass
 
             if self.status:
+
                 try:
                     avatarTag = detail.find_element_by_css_selector('div.card-feed>div.avator>a>img')
                 except NoSuchElementException:
