@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 from selenium import webdriver
-from selenium.common.exceptionsimport NoSuchElementException, NoSuchAttributeException, TimeoutException, StaleElementReferenceException, WebDriverException
+from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException, StaleElementReferenceException, WebDriverException
 from urllib.parse import unquote
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.byimport By
-from selenium.webdriver.common.keysimport Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 import re, json, uuid, time, datetime, sys
 
 
@@ -23,7 +23,6 @@ class WEIBO_SINA:
         self.driver = driver
         self.returnDataType = returnDataType
         self.index = 1
-        # self.namespace = uuid.NAMESPACE_URL
         self.timestamp = int(time.time())
         self.status = True
 
@@ -31,18 +30,18 @@ class WEIBO_SINA:
     # 微博页面下载
     # ***********************************************************
     def crawl(self):
-        s1 = time.time()
         print("\t", self.index, sys._getframe().f_code.co_name, "begin")
         try:
             self.driver.get(self.url)
-        except:  # TimeoutException as e:
-            print("\t", self.index, "Browser timeout")
+            # print(self.driver.page_source)
+        except TimeoutException:
+            print("\t", self.index, 'The connection has timed out!')
             return 'error'
         else:
-            print("\t", "%-25s" % 'first load page', "%8.3f" % (time.time() - s1), "'s")
+            # start = time.time()
             data = self.get_web()
             result = json.dumps(data, ensure_ascii = False, indent = 4, separators = (',', ': '))
-
+            # print('\nget_web() function '+str(time.time()-start)+' \'s time used! \n')
         return result
 
     # ***********************************************************
@@ -115,7 +114,6 @@ class WEIBO_SINA:
         try:
             card_feed = block.find_element_by_css_selector('div.card>div.card-feed')
             class_content = card_feed.find_element_by_css_selector('div.content')
-            # 下边这2行执行
             # from_hrefs = block.find_elements_by_css_selector('div.card>div.card-feed>div.content>p.from>a')#->div.content->p.from>a  div.card-feed
             from_hrefs = class_content.find_elements_by_css_selector('p.from>a')
             # 必须有2个a标签，否则返回
@@ -140,32 +138,36 @@ class WEIBO_SINA:
         else:
             self.status = True
 
-
+        # 2、 获取设备信息，发现有些微博没有设备信息：今天17:42 转赞人数超过20
+        # *******************************************
         if length > 1:
-            deviceID = (from_hrefs[0].get_attribute('text')).strip()
+            deviceID = (from_hrefs[1].get_attribute('text')).strip()
             contentUrl = from_hrefs[0].get_attribute('href')
             contentUrl = self.urlFilter(contentUrl)
         else:
             deviceID = 'none'
             contentUrl = ''
 
+        # 3、 获取作者头像图片链接
+        # *******************************************
         avatar = 'none'
         try:
             avatar = card_feed.find_element_by_css_selector('div.card-feed>div.avator>a>img').get_attribute('src')
         except:
             pass
 
-
+        # 4、 获取作者基本信息
+        # *******************************************
         nickname = userID = verify = 'none'
         try:
             divs = class_content.find_elements_by_css_selector('div.info>div')
-            a_s = divs[1].find_elements_by_css_selector('a')
-            length = len(a_s)
+            aTag = divs[1].find_elements_by_css_selector('a')
+            length = len(aTag)
             if length > 0:
-                nickname = a_s[0].get_attribute('nick-name')
-                userID = a_s[0].get_attribute('href').split('?')[0].split('/')[-1]
+                nickname = aTag[0].get_attribute('nick-name')
+                userID = aTag[0].get_attribute('href').split('?')[0].split('/')[-1]
                 if length > 1:
-                    verify = a_s[1].get_attribute('title')
+                    verify = aTag[1].get_attribute('title')
         except:
             pass
 
@@ -184,12 +186,14 @@ class WEIBO_SINA:
             length = len(p_txts)
             if length > 0:
                 text = p_txts[length - 1]
-                content = self.contentFilter(text)
-                contentLink = self.getContentLink(text)
+                content = self.contentFilter(text)  # 过滤正文的杂乱标签
+                contentLink = self.getContentLink(text)  # 获取正文中的链接
             else:
                 print("\t", "%-25s" % '.txterror  len=', "%d" % length)
                 return ''
 
+        # 6、提取视频和图片
+        # *******************************************
 
         video = ''
         try:
@@ -197,25 +201,26 @@ class WEIBO_SINA:
         except NoSuchElementException:
             pass
         else:
-            #  Obtain video url
+            # 提取视频连接 Obtain video url
             try:
                 a = media.find_element_by_css_selector('div.thumbnail>a.WB_video_h5')
                 src = a.get_attribute('action-data')
                 video = self.getVideoLink(src)  # 过滤链接中杂乱信息
             except (NoSuchElementException, NoSuchAttributeException):
-                # Pictures list display, one picture or picture list
+                # 获取一张/多张图片  Pictures list display, one picture or picture list
                 try:
                     div = media.find_element_by_css_selector('div.media-piclist')
                     li = div.find_elements_by_css_selector('ul>li')
                     for img in li:
-                        #  Obtain image url
+                        # 获取图片地址    Obtain image url
                         src = img.find_element_by_tag_name('img').get_attribute('src')  # Obtain image url
                         url = self.replaceBigPic(src)  # 替换大图片
                         imgUrls.append(url)
                 except (NoSuchElementException, NoSuchAttributeException):
                     pass
 
-
+        # 7、  提取 转发 评论 赞
+        # *******************************************
         forwardNumber = commentsNumber = like = 0
         try:
             href_s = block.find_elements_by_css_selector('div.card>div.card-act>ul>li>a')
@@ -238,13 +243,16 @@ class WEIBO_SINA:
             except (NoSuchElementException, IndexError):
                 print("\t", index, "%-25s" % 'forward & comment & like error ')
 
-
+        # 10、 合并字典
         data = dict(userID = userID, avatar = avatar, nickname = nickname, verification = verify, text = content,
                     contentLink = contentLink, time = date, url = contentUrl, deviceID = deviceID, forwardNumber = forwardNumber,
                     commentsNumber = commentsNumber, like = like, video = video, imgUrls = imgUrls)
 
         return data
 
+    # ***********************************************************
+    # 计算日期
+    # ***********************************************************
     def calcDate(self, timeInfo):
         getTime = datetime.datetime.now()
         year = getTime.year
@@ -253,7 +261,7 @@ class WEIBO_SINA:
 
         if '今天' in timeInfo:
             string = timeInfo.replace('今天', ' ')
-            date = str(year) + '-' + str(month) + '-' + str(day) + '' + string + ':00'
+            date = str(year) + '-' + str(month) + '-0' + str(day) + '' + string + ':00'
         elif '分钟前' in timeInfo:
             before = self.getDigit(timeInfo)
             currentTime = int(time.time())
@@ -262,7 +270,7 @@ class WEIBO_SINA:
             local = time.localtime(real)
             date = time.strftime('%Y-%m-%d %H:%M:%S', local)
         elif '秒前' in timeInfo:
-            before = getDigit(timeInfo)
+            before = self.getDigit(timeInfo)
             currentTime = int(time.time()) - before
             local = time.localtime(currentTime)
             date = time.strftime('%Y-%m-%d %H:%M:%S', local)
@@ -272,7 +280,7 @@ class WEIBO_SINA:
 
         return date
 
-
+    # ***********************************************************
     @staticmethod
     def getDigit(text):
         try:
@@ -282,6 +290,9 @@ class WEIBO_SINA:
 
         return number
 
+    # ***********************************************************
+    # 判断时间是否符合要求
+    # ***********************************************************
     def isOneDay(self, date):
         try:
             array = time.strptime(date, '%Y-%m-%d %H:%M:%S')
@@ -295,7 +306,9 @@ class WEIBO_SINA:
         except ValueError:
             return False
 
-
+    # ***********************************************************
+    # 正文过滤
+    # ***********************************************************
     @staticmethod
     def contentFilter(string):
         content = string.text
@@ -363,30 +376,7 @@ class WEIBO_SINA:
         return error
 
 
-# ***********************************************************
-# 打开一个浏览器
-# ***********************************************************
-def start_driver(timeout = 10):
-    chrome_options = webdriver.ChromeOptions()
-    chrome_options.add_argument('--no-sandbox')
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--disable--gpu')
-
-    count = 1
-    while 1:
-        try:
-            driver = webdriver.Chrome(chrome_options = chrome_options)
-        except:
-            print(self.index, sys._getframe().f_code.co_name, ' init_web_driver error', 'count=', count)
-            time.sleep(1)
-        # return ''
-        else:
-            driver.set_page_load_timeout(timeout)
-            driver.set_script_timeout(timeout)
-            break
-    return driver
-
-
+'''
 if __name__ == '__main__':
     try:
         keyword = sys.argv[1]
@@ -402,6 +392,8 @@ if __name__ == '__main__':
         try:
             weibo_sina = WEIBO_SINA(url , tasktype , driver , returnDataType)
             myreturn = weibo_sina.crawl()
+            # jsonObj = json.dumps(myreturn, ensure_ascii = False, indent = 4, separators = (',', ': '))
             print(myreturn)
         finally:
             driver.close()
+'''

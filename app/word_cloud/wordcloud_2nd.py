@@ -1,20 +1,15 @@
 #!/usr/bin/python
 # -*- coding:utf-8 -*-
-from os import path
+
 # Without GUI os must be add below two lines codes
 import matplotlib as mpl
-
 mpl.use('Agg')
 
+from os import path
 from matplotlib import pyplot as plt
 import jieba
 from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
-import imageio
-import io
-import sys
-import time
-import re
-import os
+import imageio, io, sys, time, re, os
 
 stopwords = {}
 fileName, imageName = '', ''
