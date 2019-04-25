@@ -186,7 +186,6 @@ if __name__ == '__main__':
     try:
         keyword = sys.argv[1]
         mode = sys.argv[2]
-        amount = int(sys.argv[3])
     except IndexError:
         obj = dict(errno = 4, error = 'Argument is missing')
         jsonObj = json.dumps(obj, ensure_ascii = False, indent = 4, separators = (',', ': '))
@@ -200,7 +199,7 @@ if __name__ == '__main__':
         browser = webdriver.Firefox(firefox_profile = profile, options = opts)
 
         timestamp = int(time.time())
-        process = Zhihu(browser, timestamp, amount, mode)
+        process = Zhihu(browser, timestamp, mode)
         try:
             url = 'https://www.zhihu.com/search?type=content&type=content&q=' + keyword
             obj = process.main(url)

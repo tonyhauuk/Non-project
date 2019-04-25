@@ -14,19 +14,12 @@ class Convert:
         appID = self.appID
         secert = self.secertCode
 
-        t = time.time()
-        start = int(round(t * 1000))
-
         r = ShowapiRequest("http://route.showapi.com/1456-1", appID, secert)
         r.addBodyPara("url", url)
         r.addBodyPara("account", account)
         r.addBodyPara("biz", biz)
         res = r.post()
         result = res.text
-
-        t1 = time.time()
-        end = int(round(t1 * 1000))
-        print('\nUsed time: ' + str(end - start) + 'ms')
 
         jsonStr = json.loads(result)
         resCode = jsonStr['showapi_res_code']
