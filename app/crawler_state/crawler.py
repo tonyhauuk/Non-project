@@ -6,7 +6,9 @@ import re
 import hashlib
 import xlwt
 import time
+import os
 from bs4 import BeautifulSoup
+from user import User
 
 
 class Crawler:
@@ -52,17 +54,28 @@ class Crawler:
 
                     md5 = self.encrypMd5(urls)
                     if len(md5Codes) > 0:
+                        i = 0
                         for code in md5Codes:
-                            if code != md5:
-                                user = User(url, name, urls, title, md5)
-                                md.append(md5)
-                                self.generateFile(user)
+                            if code == md5:
+                                i += 1
+                                break
+
+                        if i == 0:
+                            user = User(url, name, urls, title, md5)
+                            md.append(md5)
+                            self.generateFile(user)
                     else:
                         user = User(url, name, urls, title, md5)
                         md.append(md5)
                         self.generateFile(user)
+        count = len(md)
+        if count > 0:
+            self.appendMd5(md)
+            self.createExcel()
+        else:
+            self.createBlankExcel()
 
-        self.appendMd5(md)
+        return count
 
     def split(self, string):
         clear = re.compile('<\s*script[^>]*>[^<]*<\s*/\s*script\s*>', re.I)
@@ -88,7 +101,7 @@ class Crawler:
     def getMd5(self):
         dataList = list()
         path = self.path + 'md5.txt'
-        with open(path, 'a+', encoding='utf-8') as f:
+        with open(path, 'r', encoding='utf-8') as f:
             for line in f.readlines():
                 dataList.append(line.replace('\n', ''))
 
@@ -96,16 +109,16 @@ class Crawler:
 
     def generateFile(self, user):
         path = self.path + 'list.csv'
-        with open(path, 'w') as f:
+        with open(path, 'a') as f:
             f.write(user.webname + ', ' + user.username + ', ' + user.link + ', ' + user.title)
-            f.write('\r\n')
+            f.write('\r')
 
     def appendMd5(self, codes):
         path = self.path + 'md5.txt'
         with open(path, 'a+') as f:
             for md5 in codes:
                 f.write(md5)
-                f.write('\r\n')
+                f.write('\r')
 
     def checkUrl(self, link, website):
         currentUrl = link.get('href')
@@ -152,58 +165,9 @@ class Crawler:
 
         return int(length)
 
-
-class User:
-    def __init__(self, webname, username, link, title, md5):
-        self.webname = webname
-        self.username = username
-        self.link = link
-        self.title = title
-        self.md5 = md5
-
-        @property
-        def webname(self):
-            return self.webname
-
-        @webname.setter
-        def webname(self, webname):
-            self.webname = webname
-
-        @property
-        def username(self):
-            return self.username
-
-        @username.setter
-        def username(self, username):
-            self.username = username
-
-        @property
-        def link(self):
-            return self.link
-
-        @link.setter
-        def link(self, link):
-            self.link = link
-
-        @property
-        def title(self):
-            return self.title
-
-        @title.setter
-        def title(self, title):
-            self.title = title
-
-        @property
-        def md5(self):
-            return self.md5
-
-        @md5.setter
-        def md5(self, md5):
-            self.md5 = md5
-
-
-if __name__ == '__main__':
-    path = './'
-    c = Crawler(path)
-    c.doJob()
-    c.createExcel()
+    def createBlankExcel(self):
+        wb = xlwt.Workbook()
+        fileName = time.strftime("%Y-%m-%d", time.localtime())
+        sheet = wb.add_sheet('empty')
+        sheet.write(0, 0, '')
+        wb.save(fileName + '.xls')
