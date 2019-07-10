@@ -14,7 +14,7 @@ class MydriversSpider(scrapy.Spider):
         # news = response.xpath('div[@class="main_left"]/div[@class="news_info news_blue"]/div[@class="news_info1"]/ul[@class="newslist"]/li')
         for cont in news:
             item = NewsItem()
-            item['title'] = cont.xpath('./span/a/text()').extract()
-            item['url'] = cont.xpath('./span/a/@href').extract()
-            # print(item)
+            item['title'] = cont.xpath('./span/a/text()').extract_frist()
+            item['url'] = cont.xpath('./span/a/@href').extract_first()
+
             yield item

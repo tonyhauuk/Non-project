@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Scrapy settings for news project
+# Scrapy settings for scrapyseleniumtest project
 #
 # For simplicity, this file contains only settings considered important or
 # commonly used. You can find more settings consulting the documentation:
@@ -9,17 +9,17 @@
 #     https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 
-BOT_NAME = 'news'
+BOT_NAME = 'scrapyseleniumtest'
 
-SPIDER_MODULES = ['news.spiders']
-NEWSPIDER_MODULE = 'news.spiders'
+SPIDER_MODULES = ['scrapyseleniumtest.spiders']
+NEWSPIDER_MODULE = 'scrapyseleniumtest.spiders'
 
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
-#USER_AGENT = 'news (+http://www.yourdomain.com)'
+#USER_AGENT = 'scrapyseleniumtest (+http://www.yourdomain.com)'
 
 # Obey robots.txt rules
-ROBOTSTXT_OBEY = True
+ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 #CONCURRENT_REQUESTS = 32
@@ -47,14 +47,14 @@ ROBOTSTXT_OBEY = True
 # Enable or disable spider middlewares
 # See https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 #SPIDER_MIDDLEWARES = {
-#    'news.middlewares.NewsSpiderMiddleware': 543,
+#    'scrapyseleniumtest.middlewares.ScrapyseleniumtestSpiderMiddleware': 543,
 #}
 
 # Enable or disable downloader middlewares
 # See https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
 DOWNLOADER_MIDDLEWARES = {
-   'new.middlewares.RandomUserAgentMiddleware': 543,
-   # 'news.middlewares.NewsDownloaderMiddleware': 543,
+   # 'scrapyseleniumtest.middlewares.ScrapyseleniumtestDownloaderMiddleware': 543,
+   #  'scrapyseleniumtest.middlewares.SeleniumMiddleware': 543,
 }
 
 # Enable or disable extensions
@@ -65,11 +65,9 @@ DOWNLOADER_MIDDLEWARES = {
 
 # Configure item pipelines
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
-ITEM_PIPELINES = {
-   'news.pipelines.NewsPipeline': 200,
-   'news.pipelines.MongoPipeline': 300,
-   'news.pipelines.RedisPipeline': 900,
-}
+#ITEM_PIPELINES = {
+#    'scrapyseleniumtest.pipelines.ScrapyseleniumtestPipeline': 300,
+#}
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://doc.scrapy.org/en/latest/topics/autothrottle.html
@@ -92,5 +90,5 @@ ITEM_PIPELINES = {
 #HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
-MONGO_URI = 'localhost'
-MONGO_DB = 'news'
+KEYWORD = ['iPad']
+MAX_PAGE = 5

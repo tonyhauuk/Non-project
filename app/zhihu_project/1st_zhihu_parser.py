@@ -192,7 +192,7 @@ if __name__ == '__main__':
         print(jsonObj)
     else:
         opts = webdriver.FirefoxOptions()
-        # opts.add_argument('--headless')  # Headless browser
+        # opts.add_argument('--headless')     # Headless browser
         # opts.add_argument('--disable-gpu')  # Disable gpu acceleration
         profile = webdriver.FirefoxProfile()
         profile.set_preference('browser.privatebrowsing.autostart', True)  # Start a private browsing
@@ -212,6 +212,7 @@ if __name__ == '__main__':
             process.quit()
 
 '''
+
 xpath locate to 'div.Card div.List'
 /html/body/div[1]/div/main/div/div[2]/div[2]/div[2]
 

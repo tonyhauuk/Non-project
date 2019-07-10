@@ -7,6 +7,7 @@ import hashlib
 import xlwt
 import time
 import os
+import csv
 from bs4 import BeautifulSoup
 from user import User
 

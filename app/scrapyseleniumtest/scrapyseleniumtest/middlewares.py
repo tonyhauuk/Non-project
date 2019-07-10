@@ -6,9 +6,16 @@
 # https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 
 from scrapy import signals
-import random
+from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from scrapy.http import HtmlResponse
+from logging import getLogger
 
-class NewsSpiderMiddleware(object):
+
+class ScrapyseleniumtestSpiderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,
     # scrapy acts as if the spider middleware does not modify the
     # passed objects.
@@ -56,7 +63,7 @@ class NewsSpiderMiddleware(object):
         spider.logger.info('Spider opened: %s' % spider.name)
 
 
-class NewsDownloaderMiddleware(object):
+class ScrapyseleniumtestDownloaderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,
     # scrapy acts as if the downloader middleware does not modify the
     # passed objects.
@@ -103,15 +110,37 @@ class NewsDownloaderMiddleware(object):
         spider.logger.info('Spider opened: %s' % spider.name)
 
 
-    class RandomUserAgentMiddleware():
+class SeleniumMiddleware():
+    def __init__(self, timeout = None, service_args = []):
+        self.logger = getLogger(__name__)
+        self.timeout = timeout
+        self.browser = webdriver.Firefox(service_args = service_args)
+        self.browser.set_page_load_timeout(self.timeout)
+        self.wait = WebDriverWait(self.browser, self.timeout)
 
-        def __init__(self):
-            self.user_agents = [
-                'Mozilla/5.0 (Windows; U MSIE 9.0; Windows NT 9.0 en-US)',
-                'Mozille/5.0 (Windows NT 6.1) AppleWebKit/537.2 (KHTML, like Gecko) Chrome/22.0.1216.0'
-                    'Safari/537.2',
-                'Mozille/5.0 (X11; Ubuntu; Linux i686; rv:15.0) Gecko/20100101 Firefox/15.0.1'
-            ]
+    def __del__(self):
+        self.browser.quit()
 
-        def process_request(self, request, spider):
-            request.headers['User-Agent'] = random.choice(self.user_agents)
+    def process_request(self, request, spider):
+        self.logger.debug('Firefox is Starting ... ')
+        page = request.meta.get('page', 1)
+        try :
+            self.browser.get(request.url)
+            if page > 1:
+                input = self.wait.until( EC.presence_of_element_located((By.CSS_SELECTOR, '#mainsrp-pager div.form > input')))
+                submit = self.wait.until( EC.presence_of_element_located((By.CSS_SELECTOR, '#mainsrp-pager div.form > span.btn.J_Submit')))
+                input.clear()
+                input.send_key(page)
+                submit.click()
+                self.wait.until(EC.text_to_be_present_in_element((By.CSS_SELECTOR, 'mainsrp-pager li.item.active > span'), str(page)))
+                self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '.m-itemlist .items .item')))
+
+                return HtmlResponse(url = request.url, body = self.browser.page_source, request = request, encoding = 'utf-8', status = 200)
+
+        except TimeoutException:
+            return HtmlResponse(url = request.url, status = 500, request = request)
+
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(timeout = crawler.setting.get('SELENIUM_TIMEOUT'), service_args = crawler.setting.get('FIREFOX_SERVICE_ARGS'))
