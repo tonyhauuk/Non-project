@@ -8,12 +8,12 @@ import time
 class SendEmail():
     def getInstanse(self):
         host = 'smtp.mxhichina.com'
-        user = 'wangxiao@estarinfo.net'
-        password = '800915aA'
+        user = ''               # email
+        password = ''           # password
         port = 465
 
-        sender = 'wangxiao@estarinfo.net'
-        receiver = '595292945@qq.com'
+        sender = ''             # sender email
+        receiver = ''           # receiver email
 
         content = time.strftime("%Y-%m-%d", time.localtime())
 
