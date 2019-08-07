@@ -376,7 +376,7 @@ class WEIBO_SINA:
         return error
 
 
-'''
+
 if __name__ == '__main__':
     try:
         keyword = sys.argv[1]
@@ -385,7 +385,7 @@ if __name__ == '__main__':
         jsonObj = json.dumps(obj, ensure_ascii = False, indent = 4, separators = (',', ': '))
         print(jsonObj)
     else:
-        driver = start_driver(20)
+        driver = webdriver.Firefox()
         url = 'https://s.weibo.com/weibo?q=' + keyword
         tasktype = ''
         returnDataType = ''
@@ -396,4 +396,3 @@ if __name__ == '__main__':
             print(myreturn)
         finally:
             driver.close()
-'''

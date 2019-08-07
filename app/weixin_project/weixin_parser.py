@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 import re, json, uuid
-
+from dateutil.parser import parse
 
 class WeixinParser:
     def __init__(self):
@@ -86,20 +86,20 @@ class WeixinParser:
         return s
 
     def getDate(self, soup):
-        time = ''
         js = soup.find_all('script')
         for str in js:
             text = str.get_text()
-            find = re.findall(r'createDate/?.*?1000', text)
+
+            find = re.findall(r'o="?.*?"', text)
             target = ''.join(find)
+            date = target.replace('o="', '').replace('"', '')
 
-            if 'createDate' in target:
-                date = target.split('Date(')
-                raw = date[1].split('*')
-                time = raw[0].replace('"', '')
-                break
+            try:
+                parse(date)
+                return date
+            except ValueError:
+                continue
 
-        return int(time)
 
     def retainImgTag(self, img):
         all = re.findall(r'</?.*?>', img)
@@ -155,7 +155,7 @@ class WeixinParser:
 
 if __name__ == '__main__':
     p = WeixinParser()
-    fileList = ['./q1.htm', './q2.html', './w3.html']
+    fileList = ['./demo.html']
     url = ['https://www.q1q1q1.com', 'https://www.1111.com', 'http://qq.com']
     info = []
     index = 0
