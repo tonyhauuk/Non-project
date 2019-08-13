@@ -11,7 +11,7 @@ print('-' * 10)
 for dist in get_installed_distributions():
     print("updating:", dist.project_name, "\t")
     print(time.asctime(time.localtime(time.time())))
-    call("pip3 install --upgrade " + dist.project_name, shell=True)
+    call("pip3 install --upgrade " + dist.project_name + ' -i https://mirrors.aliyun.com/pypi/simple', shell=True)
     print('\t\n')
 
 

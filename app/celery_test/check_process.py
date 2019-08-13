@@ -3,7 +3,7 @@ from celery.schedules import crontab
 import os
 
 app = Celery('CelerySchedule',
-             broker='redis://localhost',
+             broker='redis://localhost', # password  redis:password@lcoalhost:6379
              backend='redis://localhost')
 
 app.conf.beat_schedule = {
