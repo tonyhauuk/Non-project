@@ -22,8 +22,8 @@ class Zhihu:
     def main(self, url):
         try:
             self.browser.get(url)
-            if self.mode == 'day':
-                self.oneDay()
+            # if self.mode == 'day':
+            #     self.oneDay()
         except NoSuchWindowException:
             return dict(errno = 2, error = 'Page can not open')
         else:
@@ -37,21 +37,19 @@ class Zhihu:
                     except (NoSuchElementException, WebDriverException):
                         continue
             else:
-                WebDriverWait(self.browser, 1).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div/main/div/div[2]/div[2]/div/div/div/div[11]')))
+                WebDriverWait(self.browser, 1).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div/main/div/div[2]/div[2]/div/div/div/div/div[36]/div')))
 
             if self.mode == 'day':
-                css = 'div>div.Search-container>div#SearchMain.SearchMain>div.Card>div.List>div'
+                # css = 'div>div.Search-container>div#SearchMain.SearchMain>div.Card>div.List>div'
+                css = 'div#SearchMain>div>div.ListShortcut>div.List>div'
             elif self.mode == 'normal':
                 css = 'html>body>div:nth-of-type(1)>div>main>div>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-of-type(2)'
 
-            try:
-                cardList = self.browser.find_element_by_css_selector(css)
-                data = self.doParse(cardList)
-                jsonObj = json.dumps(data, ensure_ascii = False, indent = 4, separators = (',', ': '))
+            cardList = self.browser.find_element_by_css_selector(css)
+            data = self.doParse(cardList)
+            jsonObj = json.dumps(data, ensure_ascii = False, indent = 4, separators = (',', ': '))
 
-                return jsonObj
-            except NoSuchElementException:
-                return dict(errno = 7, error = 'Web page error')
+            return jsonObj
 
     def doParse(self, cardList):
         data = dict()
@@ -70,6 +68,8 @@ class Zhihu:
             for item in items:
                 try:
                     info = self.blockParse(item)
+                    if 'error' in info:
+                        continue
                     data[i] = info
                 except NoSuchElementException:
                     break
@@ -85,7 +85,6 @@ class Zhihu:
             return dict(errno = 3, error = str(e))
 
     def blockParse(self, item):
-        # pool = mp.Pool(4)
         try:
             urlTag = item.find_element_by_css_selector('div.AnswerItem>h2.ContentItem-title>div>a')
         except NoSuchElementException:
@@ -104,19 +103,15 @@ class Zhihu:
             actions = richContent.find_element_by_css_selector('div.ContentItem-actions')
             likes = actions.find_element_by_css_selector('span>button.VoteButton--up').text
             like = self.getLikeNumber(likes)
-            # jobs = [pool.apply_async(self.getComments, args = (url,)) for url in url]
-            # comments = [j.get() for j in jobs]
-            # print(comments)
-            # exit()
 
-            data = dict(title = title, url = url, userName = userName, text = text[0:100], time = publishTime, like = like)
+            data = dict(title = title, url = url, userName = userName, text = text, time = publishTime, like = like)
 
             return data
         except (NoSuchElementException, NoSuchAttributeException) as e:
             print('Block error: ' + str(e))
+            return 'block error'
 
-    @staticmethod
-    def filterHTML(str):
+    def filterHTML(self, str):
         reg1 = '<[^<img>].*?>'
         reg2 = '<[^img>]+>'
         p = re.compile(reg1)
@@ -127,11 +122,11 @@ class Zhihu:
         r1 = r1.replace('</noscript>', '')
         p = re.compile(r'''(<img\b[^<>]*?\bsrc[\s\t\r\n]*=[\s\t\r\n]*["']?[\s\t\r\n]*([^\s\t\r\n"'<>]*)[^<>]*?/?[\s\t\r\n]*>)''', re.IGNORECASE)
         r2 = p.sub(r'''<img src="\2">''', r1)
+        content = r2.replace('<img src=\"data:image/svg+xml;utf8,\">', '')
 
-        return r2
+        return content
 
-    @staticmethod
-    def getPublishTime(str):
+    def getPublishTime(self, str):
         s = ''
         for i in str:
             if i >= u'\u4e00' and i <= u'\u9fa5':
@@ -141,8 +136,7 @@ class Zhihu:
 
         return t
 
-    @staticmethod
-    def getLikeNumber(likes):
+    def getLikeNumber(self, likes):
         array = likes.split('赞同')
         num = array[1].strip()
         if num == '':
@@ -153,8 +147,10 @@ class Zhihu:
     # Click one day selection
     def oneDay(self):
         try:
-            self.browser.find_element_by_xpath('/html/body/div[1]/div/main/div/div[1]/div/div/div/button').click()
-            self.browser.find_element_by_xpath('/html/body/div[4]/div/span/div/div/button[2]').click()
+            # self.browser.find_element_by_xpath('/html/body/div[1]/div/main/div/div[1]/div/div/div/button').click()
+            # self.browser.find_element_by_xpath('/html/body/div[4]/div/span/div/div/button[2]').click()
+            self.browser.find_element_by_xpath('/html/body/div[1]/div/main/div/div[1]/div/div/div/button/span').click()
+            self.browser.find_element_by_xpath('//*[@id="Select3-1"]').click()
         except NoSuchElementException as e:
             print(e)
 
@@ -171,10 +167,6 @@ class Zhihu:
 
         return int(num)
 
-    def getComments(self, url):
-        return self.browser.get(url)
-
-
     def closed(self):
         self.browser.close()
 
@@ -185,7 +177,7 @@ class Zhihu:
 if __name__ == '__main__':
     try:
         keyword = sys.argv[1]
-        mode = sys.argv[2]
+        # mode = sys.argv[2]
     except IndexError:
         obj = dict(errno = 4, error = 'Argument is missing')
         jsonObj = json.dumps(obj, ensure_ascii = False, indent = 4, separators = (',', ': '))
@@ -195,16 +187,16 @@ if __name__ == '__main__':
         # opts.add_argument('--headless')     # Headless browser
         # opts.add_argument('--disable-gpu')  # Disable gpu acceleration
         profile = webdriver.FirefoxProfile()
-        profile.set_preference('browser.privatebrowsing.autostart', True)  # Start a private browsing
+        # profile.set_preference('browser.privatebrowsing.autostart', True)  # Start a private browsing
         browser = webdriver.Firefox(firefox_profile = profile, options = opts)
-
+        browser.set_page_load_timeout(30)
         timestamp = int(time.time())
-        process = Zhihu(browser, timestamp, mode)
+        process = Zhihu(browser, timestamp)
         try:
-            url = 'https://www.zhihu.com/search?type=content&type=content&q=' + keyword
+            url = 'https://www.zhihu.com/search?range=1d&type=content&q=' + keyword
             obj = process.main(url)
             print(obj)
-        except TimeoutException:
+        except TimeoutException as e:
             obj = dict(errno = 6, error = 'The connection has timed out!')
             jsonObj = json.dumps(obj, ensure_ascii = False, indent = 4, separators = (',', ': '))
             print(jsonObj)
