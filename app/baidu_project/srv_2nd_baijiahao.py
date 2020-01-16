@@ -29,7 +29,7 @@ class Baijiahao:
         self.filePath = './baidu/'
         self.d = {}
         self.initDict()
-        self.writeDict()
+        # self.writeDict()
 
 
         # self.url = browser.url
@@ -42,7 +42,7 @@ class Baijiahao:
     def crawl(self):
         print(' -------   execution  --------- \n')
         limit = 'ok'
-        self.url = 'https://www.baidu.com/s?ie=utf-8&cl=2&medium=2&rtt=4&bsst=1&rsv_dl=news_t_sk&tn=news&word=智能手表'
+        self.url = 'https://www.baidu.com/s?ie=utf-8&cl=2&medium=2&rtt=4&bsst=1&rsv_dl=news_t_sk&tn=news&wd=wizcoz%E6%A0%AA%E5%BC%8F%E4%BC%9A%E7%A4%BE&tfflag=0'
 
         try:
             # if 'error' == self.instance.element_open_link(self.browser, self.url, self.index, sleeptime = 0):
@@ -52,13 +52,21 @@ class Baijiahao:
         except:
             print('page can not open !!!')
 
+        if '抱歉，没有找到' in self.browser.page_source:
+            print('没有')
+            return
+
         try:
+            print('try start ./../....')
             completed = 'complete'
             # self.browser.find_element_by_xpath('/html/body').send_keys(Keys.END)
             self.i = 0
 
             while True:
+
                 items = self.browser.find_elements_by_css_selector('div#wrapper_wrapper > div#container > div#content_left > div > div.result')
+
+
                 # items = self.element.elements_lock(self.browser, 'div#wrapper_wrapper > div#container > div#content_left > div > div.result', self.index, sleeptime = 0)
 
                 for item in items:
@@ -90,7 +98,7 @@ class Baijiahao:
                 except NoSuchElementException:
                     break
 
-                # self.i = 0
+                self.i = 0
             return completed, '', limit
         except Exception as e:
             print('Crawl error: ', e)
@@ -129,7 +137,7 @@ class Baijiahao:
                     self.browser.switch_to.window(handles[0])
 
             time.sleep(interval)
-            objStr = title + '\n\n' + href + '\n\n\n\n' + source
+            objStr = href + '\n' + title + '\n0\n\n\n\n' + source
 
             self.writeFile(objStr, current, self.i)
         except (NoSuchElementException, NoSuchAttributeException) as e:
@@ -243,25 +251,21 @@ class Baijiahao:
     # 内存字典：每天凌晨3点执行这个程序，程序检查文件当中的过期数据
     def expire(self):
         # 检查过期数据
-        tmp = {}
+        li = []
         current = int(time.time())
-        file = './record/baijiahao.txt'
+        day = 60 * 60 * 24
+        for k, v in self.d.items():
+            if current - int(v) > day: # 如果时间戳的差大于1天的秒数，就删除
+                li.append(k)
 
-        with open(file, mode = 'r') as f:
-            line = f.readline()
-            if line != '':
-                self.d = eval(str(line))  # 直接把字符串转成字典格式
-                day = 60 * 60 * 24
-                for k, v in self.d.items():
-                    if current - int(v) < day:
-                        tmp[k] = v
+        # 删除字典里过期的数据
+        for i in li:
+            self.d.pop(i)
 
-                self.d = tmp
 
         # 更新txt文件
         fileName = './record/baijiahao.txt'
         os.remove(fileName)
-        print(self.d)
         with open(fileName, 'a+') as f:
             f.write(str(self.d))
 
@@ -439,9 +443,8 @@ if __name__ == '__main__':
     try:
         while True:
             process.crawl()
-            # process.expire()
-            # time.sleep(5)
-            break
+            process.expire()
+            time.sleep(2)
 
     except TimeoutException:
         print('The connection has timed out!')

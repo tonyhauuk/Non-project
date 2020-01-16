@@ -49,7 +49,7 @@ def checkSize():
 
 
 now = datetime.datetime.now()
-nextTime = now + datetime.timedelta(days = +1)
+nextTime = now + datetime.timedelta(days = 1)
 nextYear = nextTime.date().year
 nextMonth = nextTime.date().month
 nextDay = nextTime.date().day

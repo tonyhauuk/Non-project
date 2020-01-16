@@ -15,7 +15,7 @@ from crawlerfun import DriverElement
 from bloom_filter import BloomFilter
 import crawlerfun
 import threading
-import delete_expire
+
 
 class Baijiahao:
     url = ''
@@ -29,10 +29,9 @@ class Baijiahao:
     def __init__(self, browser):
         self.timeStamp = int(time.time())
         self.filePath = './baidu/'
-        self.s = set()
-        self.filter = BloomFilter(max_elements = 10000000, error_rate = 0.1)
-        self.initFilter()
-        # delete_expire.deleteExpire()
+        self.d = {}
+        self.initDict()
+        self.writeDict()
 
         self.url = browser.url
         self.tasktype = browser.tasktype
@@ -40,21 +39,22 @@ class Baijiahao:
         self.returnDataType = browser.returnDataType
         self.index = browser.index
         self.instance = DriverElement()
+        self.savetype = browser.savetype  # 保存文件的方式c 是网页通过字符串返回，python是自己写目录和文件
+        self._dir = ''
+        self.dir = ''
 
     def crawl(self):
+        print(' -------   execution  --------- \n')
         limit = 'ok'
-        self.url = 'https://www.baidu.com/s?ie=utf-8&cl=2&medium=2&rtt=4&bsst=1&rsv_dl=news_t_sk&tn=news&word=微软'
+        self.url = 'https://www.baidu.com/s?ie=utf-8&cl=2&medium=2&rtt=4&bsst=1&rsv_dl=news_t_sk&tn=news&word=智能手表'
 
         try:
             if 'error' == self.instance.element_open_link(self.browser, self.url, self.index, sleeptime = 0):
                 limit = 'error'
-
-            # self.browser.get(self.url)
         except:
             print('page can not open !!!')
 
         try:
-            self.cleanDir(self.filePath)
             completed = 'complete'
             # self.browser.find_element_by_xpath('/html/body').send_keys(Keys.END)
             self.i = 0
@@ -90,9 +90,14 @@ class Baijiahao:
                     else:
                         break
                 except NoSuchElementException:
+                    completed = 'interrupt'
                     break
 
-                # self.i = 0
+                self.i = 0
+
+            if self.i > 0 and self.savetype == 'python':
+                crawlerfun.rename(self._dir, self.dir)
+
             return completed, '', limit
         except Exception as e:
             print('Crawl error: ', e)
@@ -104,12 +109,15 @@ class Baijiahao:
             current = int(time.time())
             content = item.find_element_by_css_selector('div.result h3.c-title a')
             href = content.get_attribute('href')
+            md5 = self.makeMD5(href)
 
-            # bloom-filter
-            if self.makeMD5(href) in self.filter:
+            # dict filter
+            if md5 in self.d:
+                # 更新当前文章的时间戳
+                # self.d[md5] = str(current)
                 return
             else:
-                self.writeBloom(href, current)
+                self.d[md5] = str(current)  # 往dict里插入记录
                 self.i += 1
 
             title = content.text
@@ -128,14 +136,13 @@ class Baijiahao:
                     self.browser.switch_to.window(handles[0])
 
             time.sleep(interval)
-            objStr = title + '\n\n' + href + '\n\n\n\n' + source
 
-            self.writeFile(objStr, current, self.i)
+            # self.writeFile(objStr, current, self.i)
+            self.write_new_file(href, title, source, self.i)
         except (NoSuchElementException, NoSuchAttributeException) as e:
             print('Element error:', e)
         except Exception as e:
             print('Extract Exception: ', e)
-
 
     # html生成文件，爬取下来的信息写到文件当中
     def writeFile(self, objStr, ts, i):
@@ -150,23 +157,31 @@ class Baijiahao:
         except Exception as e:
             print('write file error: ', e)
 
-    # 写入bloomfilter记录
-    def writeBloom(self, link, current):
+    # 写入dict记录
+    def writeDict(self):
         try:
-            fileName = './record/baijiahao.txt'
-
-            with open(fileName, 'a+') as f:
-                m = hashlib.md5()
-                b = link.encode(encoding = 'utf-8')
-                m.update(b)
-                link = m.hexdigest()
-
-                string = str(current) + '_' + link[8:-8] # 取md5码中间8位
-                f.write(string + '\n')  # 记录文件
-                self.filter.add(link[8:-8]) # 往bloom-filter里插入记录
+            threads = []
+            t = threading.Thread(target = Baijiahao.deleteExpire, args = (self,))
+            threads.append(t)
+            threads[0].start()
+            threads[0].join()
 
         except Exception as e:
-            print('write bloom-filter file error: ', self.i, e)
+            print('write dict file error: ', e)
+
+    # 定时把内存中的字典写入到文件中
+    def cleanAndWrite(self):
+        interval = 60 * 60 * 1
+        fileName = './record/baijiahao.txt'
+        while True:
+            time.sleep(interval)
+            with open(fileName, 'a+') as f:
+                f.write(str(self.d))
+
+                # for k, v in self.d.items():
+                #     with open(fileName, 'a+') as f:
+                #         string = k + '_' + v
+                #         f.write(string + '\n')  # 记录文件
 
     # 日期转换成时间戳
     def calcDate(self, fullTime):
@@ -185,46 +200,150 @@ class Baijiahao:
 
             size = int(size / 1024)
 
-            capa = 25000
-            if size > capa:  # 文件夹大于25MB就删除
+            capa = 50000  # 值是KB
+            if size > capa:
                 shutil.rmtree(dir)
                 os.mkdir(dir)
         except:
             print('No file !!!')
 
-    # 初始化bloomfilter
-    def initFilter(self):
+    # 初始化字典， 把从文件当中读出来的字符串转成字典格式，写入到内存当中
+    def initDict(self):
         file = './record/baijiahao.txt'
         try:
             with open(file, mode = 'r') as f:
-                lines = f.readlines()
-
-                current = int(time.time())
-                day = 60 * 60 * 24
-                if len(lines) > 0:
-                    for line in lines:
-                        t = int(line.split('_')[0])
-                        if current - t < day:  # 判断如果时间在一天之内，也加入到filer里
-                            md5 = line.split('_')[1]
-                            self.filter.add(md5.strip())
+                line = f.readline()
+                if line != '':
+                    self.d = eval(str(line))  # 直接把字符串转成字典格式
         except:
             # 如果没有文件，则直接创建文件
             fd = open(file, mode = 'a+', encoding = 'utf-8')
             fd.close()
 
+    # 生成md5
     def makeMD5(self, link):
         m = hashlib.md5()
         b = link.encode(encoding = 'utf-8')
         m.update(b)
         link = m.hexdigest()
 
-        return link[8:-8]  # 取中间8位md5码
+        return link
 
+    # 删除过期记录
+    def deleteExpire(self):
+        now = datetime.datetime.now()
+        nextTime = now + datetime.timedelta(days = +1)
+        nextYear = nextTime.date().year
+        nextMonth = nextTime.date().month
+        nextDay = nextTime.date().day
+        # 时间设置成凌晨3点，这个时间段信息相对来说比较少，更新文件冲突较少
+        nextDayTime = datetime.datetime.strptime(str(nextYear) + '-' + str(nextMonth) + '-' + str(nextDay) + ' 03:00:00', '%Y-%m-%d %H:%M:%S')
+        timerStartTime = (nextDayTime - now).total_seconds()
+        timer = threading.Timer(timerStartTime, self.expire)
+        timer.start()
 
+    # 内存字典：每天凌晨3点执行这个程序，程序检查文件当中的过期数据
+    def expire(self):
+        # 检查过期数据
+        li = []
+        current = int(time.time())
+        day = 60 * 60 * 24
+        for k, v in self.d.items():
+            if current - int(v) > day:  # 如果时间戳的差大于1天的秒数，就删除
+                li.append(k)
+
+        # 删除字典里过期的数据
+        for i in li:
+            self.d.pop(i)
+
+        # 更新txt文件
+        fileName = './record/baijiahao.txt'
+        os.remove(fileName)
+        with open(fileName, 'a+') as f:
+            f.write(str(self.d))
+
+        end = int(time.time()) - current
+        interval = 86400 - end  # 下一次间隔多久来执行这个程序，每次的执行时间不固定，所以得用总时间来减去当前所用的时间，得出的差就是执行下次一次需要的秒数
+        timer = threading.Timer(interval, self.expire)
+        timer.start()
+
+    # 写一个新文章
+    def write_new_file(self, current_url, current_title, page_source, i):
+        ok = 0
+        # 合成铱星文件格式
+        # page_source = current_url + '\n' + current_title + '\n' + '1152937' + '\n\n\n\n' + page_source
+        page_text = current_url + '\n' + current_title + '\n0\n\n\n\n' + page_source
+        # iask_3_7830.htm-2  #iask_[ip数字]_[采集文章序号].htm-[线程号]
+        if '' == self._dir:
+            self.baijiahao_mkdir()
+
+        # filename = self._dir + 'iask_' + str(page) + '_' + str(self.total.num) + '.htm-2'
+        filename = self._dir + 'iask_' + + str(ts) + '_' + str(i) + '.html'
+        for num in range(2):
+            if 1 == crawlerfun.write_file(filename, page_text, ifdisplay = 0):
+                ok = 1
+                break
+            else:  # 有时目录会被c程序删掉
+                crawlerfun.mkdir(self._dir)
+
+        return ok
+
+    # 制作百家号目录
+    # 注意不创建目录，只是生成目录信息
+    def baijiahao_mkdir(self):
+        # 建立目录 /estar/newhuike2/1/_iask1553618820.1.1.1
+        # _iask[ip数字].[线程号].[时间戳].[毫秒时间戳
+        dirroot = '/estar/newhuike2/1/'
+        # t = time.time()
+        # tm = int(time.time())
+        # tm_millisecond = int(tm * 1000 ) % 1000
+        tm_s, tm_millisecond = crawlerfun.get_timestamp(ifmillisecond = 1)
+        # ip = '183.131.246.178'
+        # ip_num = socket.ntohl(struct.unpack("I", socket.inet_aton(str(self.ip)))[0])
+        # ip_num = crawlerfun.ip2num(self.ip)
+        # dirsmall = 'iask'+ str(tm) + '.'+str(tm_millisecond)+'.'+str(self.index)+'.'+str(ip_num)+'/'
+        dirsmall = 'iask' + str(self.ipnum) + '.' + str(self.index) + '.' + str(tm_s) + '.' + str(tm_millisecond) + '/'
+        self._dir = dirroot + '_' + dirsmall
+        self.dir = dirroot + dirsmall
+        # 不建立等有了新文章再建立
+        # os.mkdir(self._dir)
+
+        return self._dir, self.dir
 
     ''' 
         下面的程序暂时用不到，先保留
     '''
+
+    # 文件形式： 每天凌晨3点执行这个程序，程序检查文件当中的过期数据
+    def expireFile(self):
+        try:
+            lst = list()
+            current = int(time.time())
+            # 读取当前的文件
+            with open('./record/baijiahao.txt', mode = 'r') as f:
+                lines = f.readlines()
+                day = 60 * 60 * 24
+                if len(lines) > 0:
+                    for line in lines:
+                        t = int(line.split('_')[1])
+                        if current - t < day:  # 判断如果时间在一天之内，加入到数组中
+                            lst.append(line)
+
+            # 写一个新的文件，记录的都是删除过期记录的信息
+            with open('./record/tmp_baijiahao.txt', mode = 'a+', encoding = 'utf-8') as f:
+                for text in lst:
+                    f.write(text)
+
+            # 删除旧文件，把tmp文件名修改成刚才删除文件的名称
+            os.remove('./record/baijiahao.txt')
+            os.rename('./record/tmp_baijiahao.txt', './record/baijiahao.txt')
+
+            end = int(time.time()) - current
+            interval = 86400 - end  # 下一次间隔多久来执行这个程序，每次的执行时间不固定，所以得用总时间来减去当前所用的时间，得出的差就是执行下次一次需要的秒数
+            timer = threading.Timer(interval, self.expireFile)
+            timer.start()
+        except:
+            pass
 
     # 检查bloomfilter的记录
     def checkBloom(self, fileName):
@@ -343,8 +462,6 @@ class Baijiahao:
             if len(lines) > 0:
                 for line in lines:
                     self.filter.add(line)
-
-
 
 
 '''
