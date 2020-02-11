@@ -21,7 +21,7 @@ cryptography==2.7
 cssselect==1.1.0
 cycler==0.10.0
 dicttoxml==1.7.4
-Django==3.0.2
+Django==3.0.3
 dnspython==1.16.0
 docker-py==1.10.6
 docker-pycreds==0.4.0
