@@ -25,6 +25,12 @@ class Qie:
 
 
     def crawl(self, url):
+        self.i = 0
+        page = 0
+
+        keyword = self.url.split('word=')[1]
+        self.url = 'https://www.toutiao.com/search/?keyword=' + keyword
+
         try:
             self.browser.get(url)
         except:
@@ -37,9 +43,7 @@ class Qie:
                 return 'interrupt', 'none', 'error'
 
 
-        self.i = 0
-        self.total = 0
-        page = 0
+
 
         for i in range(5):
             try:
