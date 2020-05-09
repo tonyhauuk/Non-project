@@ -1,5 +1,6 @@
 from appium import webdriver
 from time import sleep
+from appium.common.exceptions import *
 
 
 class Toutiao:
@@ -26,7 +27,7 @@ class Toutiao:
         y1 = int(l[1] * 0.75)
         y2 = int(l[1] * 0.25)
 
-        self.driver.swipe(x1, y1, x1, y2, 1000)
+        self.driver.swipe(x1, y1, x1, y2, 500)
 
     def swipeDown(self):
         l = self.getSize()
@@ -44,16 +45,46 @@ class Toutiao:
         for item in results:
             print(item.text)
 
+    def tap(self):
+        # 用户信息请求
+        self.driver.find_element_by_id('com.ss.android.article.lite:id/q2').click()
+        sleep(2)
+        # 权限请求
+        try:
+            for i in range(2):
+                self.driver.find_element_by_id('com.android.packageinstaller:id/permission_allow_button').click()
+                sleep(2)
+        except:
+            sleep(2)
+            self.driver.find_element_by_id('com.android.packageinstaller:id/permission_allow_button').click()
+        # 红包
+        self.driver.find_element_by_xpath('/hierarchy/android.widget.FrameLayout/android.widget.LinearLayout/android.widget.FrameLayout/android.widget.RelativeLayout/android.widget.RelativeLayout/android.widget.ImageView[1]').click()
+        sleep(2)
+        # 如果弹出更新，就点击
+        try:
+            self.driver.find_element_by_id('com.ss.android.article.lite:id/b7b').click()
+        except:
+            pass
+
 
 if __name__ == '__main__':
     toutiao = Toutiao()
-    sleep(10)
+    toutiao.tap()
+    sleep(5)
     try:
-        for i in range(5):
+        for i in range(10):
             toutiao.swipeUp()
             sleep(2)
 
-        toutiao.exec()
-        sleep(120)
+        # toutiao.exec()
     except Exception as e:
         print('Exception: ', e)
+
+
+'''
+
+我知道了：[210,1003][599,1037]
+权限请求：[614,760][722,851]
+红包：	[582,382][658,458]
+
+'''
