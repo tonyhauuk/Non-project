@@ -1,41 +1,52 @@
-# coding: utf-8
 # -*- coding: utf-8 -*-
+
 import time, requests, bs4, datetime, re, hashlib, os, sys, json
 from time import sleep
-from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, NoSuchWindowException
+from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, NoSuchWindowException, TimeoutException, StaleElementReferenceException
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from w3lib import html
 from w3lib.html import remove_comments
+import crawlerfun
 
 
-# sys.path.append('../')
-# import crawlerfun
 
-
-class Crawler:
-    def __init__(self, d):
+class Banking:
+    def __init__(self, browser):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
         self.date = time.strftime("%Y-%m-%d %H:%M:%S", timeArray)
-        self.d = d
+        self.d = self.initDict()
+        self.browser = browser.driver
         self.dir = self._dir = ''
-        # self.ipnum = crawlerfun.ip2num('61.130.181.229')
+        self.ipnum = crawlerfun.ip2num(browser.ip)
         self.debug = True
 
 
-    def doJob(self):
+    def crawl(self):
+        n = 0
         for key, value in self.schedule():  # 获取频道链接
-            self.doCrawl(key, value)
+            n += self.doCrawl(key, value)
+            sleep(5)
 
+        if n > 0:
+            return 'complete', str(n), 'ok'
+        elif n == -1:
+            return 'interrupt', 'Timeout', 'error'
+        else:
+            return 'complete', 'none', 'ok'
 
     # 开始爬
     def doCrawl(self, colName, url):
+        self.rename()
         self.i = self.total = 0
-        self.start()
-        self.browser.get(url)
+        try:
+            self.browser.get(url)
+        except TimeoutException:
+            return -1
+
         i = 0
 
         skipList = ['政策解读', '新闻发言人', '数据图表']
@@ -45,22 +56,25 @@ class Crawler:
             self.particular()
 
         for j in range(len(leftList)):  # 循环左侧的列表
-            lst = self.browser.find_elements_by_css_selector('div.caidan-left > ul.caidan-left-yiji > li.ng-scope')  # 获取左边频道的element
-
             if colName == '政务信息' and i == 0:
                 i += 1  # 跳过政府信息公开那一栏的信息
-                print('跳过： 政府信息公开  专栏')
+                continue
 
+            lst = self.browser.find_elements_by_css_selector('div.caidan-left > ul.caidan-left-yiji > li.ng-scope')  # 获取左边频道的element
             try:
                 listName = lst[i].find_element_by_tag_name('a').text
+
                 if listName in skipList:  # 如果当前文字符合list名称，直接跳过不采集
                     i += 1
                     lst[i].find_element_by_tag_name('a').click()
                     continue
-            except NoSuchElementException:
+            except (NoSuchElementException, StaleElementReferenceException):
                 continue
             except IndexError:
                 break
+
+            if self.debug:
+                print(colName, '-- list name:', listName)
 
             try:
                 moreList = self.browser.find_elements_by_css_selector('div.list > div.tabs > a')
@@ -81,17 +95,24 @@ class Crawler:
             except (NoSuchElementException, IndexError):
                 self.rightCrawl()
 
+            sleep(5)
 
-            if i < len(lst) - 1:
+            if i < len(lst):
                 sleep(2)
                 i += 1
-                # print('将要点击的下一列表名称： "', lst[i].find_element_by_tag_name('a').text,'"')
-                lst[i].find_element_by_tag_name('a').click()
-                sleep(1)
+                try:
+                    # print('将要点击的下一列表名称： "', lst[i].find_element_by_tag_name('a').text,'"')
+                    self.browser.find_elements_by_css_selector('div.caidan-left > ul.caidan-left-yiji > li.ng-scope')[i].find_element_by_tag_name('a').click()
+                except IndexError:
+                    break
 
         if self.total > 0:
             self.rename()
             self.expire()
+
+            return self.total
+        else:
+            return 0
 
 
 
@@ -130,10 +151,13 @@ class Crawler:
             divs = item.find_elements_by_css_selector('div.panel-row.ng-scope:not(.ng-hide)')
             length += len(divs)
             for div in divs:
-                dateTime = div.find_element_by_css_selector('span.date.ng-binding').text
-                if dateTime in self.date:
-                    sleep(2)
-                    self.extract(div)
+                try:
+                    dateTime = div.find_element_by_css_selector('span.date.ng-binding').text
+                    if dateTime in self.date:
+                        self.extract(div)
+                except Exception as e:
+                    pass
+
 
         return length
 
@@ -155,23 +179,24 @@ class Crawler:
     def particular(self):
         moreList = self.browser.find_elements_by_css_selector('div.list.ng-scope > div.zhengfuxinxi-list.mb25.ng-scope > div.zhengfuxinxi-list-tabmore a')
         for i in range(len(moreList)):  # 点击更多, 如果没有略过
-            self.browser.find_elements_by_css_selector('div.list.ng-scope > div.zhengfuxinxi-list.mb25.ng-scope > div.zhengfuxinxi-list-tabmore a')[i].click()
-            sleep(1)
-            self.rightCrawl()
-            self.browser.back()
-            sleep(1)
-            self.browser.find_elements_by_css_selector('div.list.ng-scope > div.zhengfuxinxi-list.mb25.ng-scope > div.zhengfuxinxi-list-tabmore a')  # 重新获取element对象
-            sleep(2)
+            try:
+                self.browser.find_elements_by_css_selector('div.list.ng-scope > div.zhengfuxinxi-list.mb25.ng-scope > div.zhengfuxinxi-list-tabmore a')[i].click()
+                sleep(1)
+                self.rightCrawl()
+                self.browser.back()
+                sleep(1)
+                self.browser.find_elements_by_css_selector('div.list.ng-scope > div.zhengfuxinxi-list.mb25.ng-scope > div.zhengfuxinxi-list-tabmore a')  # 重新获取element对象
+                sleep(2)
+            except:
+                continue
 
 
     def particularCrawl(self):
-        print('进入到了非正常页面采集的method')
         li = self.browser.find_elements_by_css_selector('div > ul.ng-scope > li.ng-scope')
         for info in li:
             dateTime = info.find_element_by_css_selector('span.zhengfuxinxi-list-date.ng-binding').text
             if dateTime in self.date:
                 self.extract(info)
-
 
         return len(li)
 
@@ -211,10 +236,7 @@ class Crawler:
                     self.browser.switch_to.window(handle)       # 切换到之前的标签页
                     break
 
-            if self.debug:
-                print('count:', self.i, ' === ' , title, ' ===')
-
-            self.write_new_file(href, title, self.source, self.i)
+            self.write_new_file(href, title, self.source, self.i, self.date)
         except (NoSuchElementException, NoSuchAttributeException) as e:
             print('Element error:', e)
         except Exception:
@@ -231,29 +253,14 @@ class Crawler:
         return html
 
 
-    def start(self):
-        self.browser = webdriver.Firefox()
-        self.browser.set_window_position(x = 900, y = 0)
-
-
-    # 关闭标签或者窗口
-    def close(self):
-        self.browser.close()
-
-
-    # 退出浏览器
-    def quit(self):
-        self.browser.quit()
-
-
     # 读取链接
     def schedule(self):
-        filName = './column_list.json'
+        filName = './banking/column_list.json'
         f = open(filName, encoding = 'utf-8')
         obj = json.load(f)
         items = obj.items()
 
-        return dict(items)
+        return items
 
 
     # 生成md5信息
@@ -281,7 +288,7 @@ class Crawler:
 
         # 更新txt文件
         try:
-            fileName = './md5.txt'
+            fileName = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/md5.txt'
             os.remove(fileName)
             with open(fileName, 'a+') as f:
                 f.write(str(self.d))
@@ -302,7 +309,7 @@ class Crawler:
 
 
     # 写一个新文章
-    def write_new_file(self, url, title, source, i, id, time):
+    def write_new_file(self, url, title, source, i, time):
         ok = 0
         content = '''
                     <html>
@@ -319,17 +326,18 @@ class Crawler:
                         </body>
                     </html>
                 '''
-        page_text = url + '\n' + title + '\n' + str(id) + '\n\n\n\n' + content
-        print(title)
+        page_text = url + '\n' + title + '\n1170841\n\n\n\n' + content
+        if self.debug:
+            print('count:', self.total, ' === ', title, ' ===')
+
         if '' == self._dir:
             self.banking_mkdir()
 
-        # filename = self._dir + 'iask_' + str(i) + '_' + str(len(self.d)) + '.htm-2'
-        fileName = '/root/estar_save/' + 'iask_' + str(i) + '_' + str(len(self.d)) + '.htm-2'
+        filename = self._dir + 'iask_' + str(i) + '_' + str(len(self.d)) + '.htm-2'
         for num in range(2):
-            if 1 == crawlerfun.write_file(fileName, page_text, ifdisplay = 0):
-                # fileName = '/root/estar_save/' + 'iask_' + str(i) + '_' + str(len(self.d)) + '.htm-2'
-                # crawlerfun.write_file(fileName, page_text, ifdisplay = 0)  # 再次保存到/root/estar_save目录下
+            if 1 == crawlerfun.write_file(filename, page_text, ifdisplay = 0):
+                fileName = '/root/Downloads/' + 'iask_' + str(i) + '_' + str(len(self.d)) + '.htm-2'
+                crawlerfun.write_file(fileName, page_text, ifdisplay = 0)  # 再次保存到/root/Downloads目录下
                 ok = 1
                 break
             else:  # 有时目录会被c程序删掉
@@ -347,3 +355,21 @@ class Crawler:
         self.dir = dirroot + dirsmall
 
         return self._dir, self.dir
+
+
+    def initDict(self):
+        d = {}
+        file = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/md5.txt'
+        try:
+            with open(file, mode = 'r') as f:
+                line = f.readline()
+                if line != '':
+                    d = eval(str(line))  # 直接把字符串转成字典格式
+
+            return d
+        except:
+            # 如果没有文件，则直接创建文件
+            fd = open(file, mode = 'a+', encoding = 'utf-8')
+            fd.close()
+
+            return d
