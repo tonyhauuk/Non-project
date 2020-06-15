@@ -31,7 +31,10 @@ def deleteFiles():
     name = os.listdir(filePath)
 
     for i in name:
-        fileInfo = os.stat(i)
+        try:
+            fileInfo = os.stat(filePath + i)
+        except FileNotFoundError:
+            continue
         timeStamp = fileInfo.st_mtime
         timeArray = time.localtime(timeStamp)
         date = time.strftime("%Y-%m-%d", timeArray)

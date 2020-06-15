@@ -28,13 +28,14 @@ class Banking:
     def crawl(self):
         n = 0
         for key, value in self.schedule():  # 获取频道链接
-            n += self.doCrawl(key, value)
+            i = self.doCrawl(key, value)
+            if i == -1:
+                return 'interrupt', 'none', 'error'
+            n += i
             sleep(5)
 
         if n > 0:
             return 'complete', str(n), 'ok'
-        elif n == -1:
-            return 'interrupt', 'Timeout', 'error'
         else:
             return 'complete', 'none', 'ok'
 
@@ -44,7 +45,7 @@ class Banking:
         self.i = self.total = 0
         try:
             self.browser.get(url)
-        except TimeoutException:
+        except:
             return -1
 
         i = 0
@@ -53,7 +54,8 @@ class Banking:
         leftList = self.browser.find_elements_by_css_selector('div.caidan-left > ul.caidan-left-yiji > li.ng-scope')  # 左边频道列表点击, 循环
 
         if colName == '政府信息公开': # 政务信息栏目下的第一条，政府公开信息单独采集，页面都不一样
-            self.particular()
+            n = self.particular()
+            return n
 
         for j in range(len(leftList)):  # 循环左侧的列表
             if colName == '政务信息' and i == 0:
@@ -82,18 +84,20 @@ class Banking:
                     raise NoSuchElementException
                 else:
                     for k in range(len(moreList)):
-                        self.browser.find_elements_by_css_selector('div.list > div.tabs > a')[k].click()
-                        sleep(1)
-                        self.rightCrawl()
-                        self.browser.back()
-                        sleep(1)
-                        self.browser.find_elements_by_css_selector('div.list > div.tabs > a')   # 重新获取element对象
-                        sleep(2)
+                        try:
+                            self.browser.find_elements_by_css_selector('div.list > div.tabs > a')[k].click()
+                            self.rightCrawl()
+                            self.browser.back()
+                            self.browser.find_elements_by_css_selector('div.list > div.tabs > a')   # 重新获取element对象
+                        except StaleElementReferenceException:
+                            print('more list:', self.browser.find_elements_by_css_selector('div.list > div.tabs > a')[k][k].text)
 
                     # 必须重新获取左边频道的element, 否则会报StaleElementReferenceException异常, 因为页面刷新过, 导致element看似相同, 实际上element id已经发生了变化
                     lst = self.browser.find_elements_by_css_selector('div.caidan-left > ul.caidan-left-yiji > li.ng-scope')
-            except (NoSuchElementException, IndexError):
+            except NoSuchElementException:
                 self.rightCrawl()
+            except IndexError:
+                continue
 
             sleep(5)
 
@@ -101,8 +105,9 @@ class Banking:
                 sleep(2)
                 i += 1
                 try:
-                    # print('将要点击的下一列表名称： "', lst[i].find_element_by_tag_name('a').text,'"')
                     self.browser.find_elements_by_css_selector('div.caidan-left > ul.caidan-left-yiji > li.ng-scope')[i].find_element_by_tag_name('a').click()
+                except StaleElementReferenceException:
+                    continue
                 except IndexError:
                     break
 
@@ -118,6 +123,9 @@ class Banking:
 
     # 抓取右侧的列表信息
     def rightCrawl(self):
+        self.browser.find_element_by_xpath('/html/body').send_keys(Keys.END)
+        sleep(1)
+        self.browser.find_element_by_xpath('/html/body').send_keys(Keys.HOME)
         while True:  # 翻页的循环
             rightList = self.browser.find_elements_by_css_selector('div.row > div.ng-scope > div.list.caidan-right-list')  # 获取右边标题list的信息
             if len(rightList) > 0:
@@ -147,17 +155,17 @@ class Banking:
     def normalCrawl(self, items):
         length = 0
         for item in items:
-            # 找到不包含class是ng-hide的div标签，他们的网站会隐藏某些div, 导致爬取的信息比看到的要多
-            divs = item.find_elements_by_css_selector('div.panel-row.ng-scope:not(.ng-hide)')
-            length += len(divs)
-            for div in divs:
-                try:
+            try:
+                # 找到不包含class是ng-hide的div标签，他们的网站会隐藏某些div, 导致爬取的信息比看到的要多
+                divs = item.find_elements_by_css_selector('div.panel-row.ng-scope:not(.ng-hide)')
+                length += len(divs)
+                for div in divs:
                     dateTime = div.find_element_by_css_selector('span.date.ng-binding').text
                     if dateTime in self.date:
                         self.extract(div)
-                except Exception as e:
-                    pass
 
+            except StaleElementReferenceException :
+                print('Normal StaleElementException')
 
         return length
 
@@ -166,9 +174,14 @@ class Banking:
     def otherCrawl(self, item):
         divs = item.find_elements_by_css_selector('div.panels.ng-scope')  # 获取条数
         for div in divs:
-            dateTime = div.find_element_by_css_selector('span.date.ng-binding').text
-            if dateTime in self.date:
-                self.extract(div)
+            try:
+                dateTime = div.find_element_by_css_selector('span.date.ng-binding').text
+                if dateTime in self.date:
+                    self.extract(div)
+            except StaleElementReferenceException:
+                dateTime = div.find_element_by_css_selector('span.date.ng-binding').text
+                if dateTime in self.date:
+                    self.extract(div)
 
             sleep(2)
 
@@ -177,6 +190,13 @@ class Banking:
 
     # 特殊页面采集
     def particular(self):
+        if self.debug:
+            print('=== 政府信息公开 === 页面采集')
+
+        self.browser.find_element_by_xpath('/html/body').send_keys(Keys.END)
+        sleep(1)
+        self.browser.find_element_by_xpath('/html/body').send_keys(Keys.HOME)
+
         moreList = self.browser.find_elements_by_css_selector('div.list.ng-scope > div.zhengfuxinxi-list.mb25.ng-scope > div.zhengfuxinxi-list-tabmore a')
         for i in range(len(moreList)):  # 点击更多, 如果没有略过
             try:
@@ -187,8 +207,17 @@ class Banking:
                 sleep(1)
                 self.browser.find_elements_by_css_selector('div.list.ng-scope > div.zhengfuxinxi-list.mb25.ng-scope > div.zhengfuxinxi-list-tabmore a')  # 重新获取element对象
                 sleep(2)
-            except:
-                continue
+            except IndexError:
+                break
+            except StaleElementReferenceException:
+                print('Particular StaleElementException')
+
+        if self.total > 0:
+            self.rename()
+            self.expire()
+            return self.total
+        else:
+            return 0
 
 
     def particularCrawl(self):
@@ -247,7 +276,6 @@ class Banking:
         pageTitle = self.browser.find_element_by_css_selector('div.container div.row > div[ng-show="showTitle"]').get_attribute('outerHTML')
         pageHTML = self.browser.find_element_by_css_selector('div.container div.row > div#wenzhang-content').get_attribute('innerHTML')
         pureHTML = remove_comments(pageHTML)
-
         html = pageTitle + pureHTML
 
         return html
