@@ -30,13 +30,11 @@ class Iac:
             url = f.readlines()
             for x in url:
                 n = self.doCrawl(x)
-                print(n)
-                break
-                # if n == -1:
-                #     status = False
-                #     break
-                # else:
-                #     i += n
+                if n == -1:
+                    status = False
+                    break
+                else:
+                    i += n
 
         if status:
             if i > 0:
@@ -59,16 +57,16 @@ class Iac:
         if 'macrodb' not in url:
             newsList = self.browser.find_elements_by_css_selector('div.lst > ul > li')
             for item in newsList:
-                dateTime = item.find_element_by_tag_name('div').text
+                dateTime = item.find_element_by_css_selector('div.date.fr').text
                 if dateTime in self.date:
                     self.extract(item)
                 else:
                     break
-        else:
-            tbody = self.browser.find_element_by_xpath('//*[@id="lst"]/table[2]/tbody')
-            newsList = tbody.find_elements_by_tag_name('tr')
-            for item in newsList:
-                self.other(item)
+        # else:
+        #     tbody = self.browser.find_element_by_xpath('//*[@id="lst"]/table[2]/tbody')
+        #     newsList = tbody.find_elements_by_tag_name('tr')
+        #     for item in newsList:
+        #         self.other(item)
 
 
         if self.i > 0:

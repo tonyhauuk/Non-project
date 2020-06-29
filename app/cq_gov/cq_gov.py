@@ -1,67 +1,100 @@
 # -*- coding: utf-8 -*-
 
-import time, requests, bs4, datetime, re, hashlib, os, sys, json
+import time, hashlib, os
 from time import sleep
 from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from w3lib import html
-from w3lib.html import remove_comments
 
 
-class Agro:
+class Chongqing:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
-        self.date = time.strftime("%Y-%m-%d %H:%M:%S", timeArray)
+        self.date = time.strftime('%Y-%m-%d %H:%M:%S', timeArray)
         self.d = d
         self.dir = self._dir = ''
-        # self.ipnum = crawlerfun.ip2num('61.130.181.229')
         self.debug = True
 
+    def cralw(self):
+        print('\n' ,'-' * 10, 'http://jjxxw.cq.gov.cn', '-' * 10)
 
-    def crawl(self):
-        self.i = self.total = 0
         self.browser = webdriver.Firefox()
-        self.browser.set_window_position(x = 700, y = 0)
-        try:
-            self.browser.get('http://cn.agropages.com/News/NewsList.htm')
-        except TimeoutException:
+        self.browser.set_window_position(x = 650, y = 0)
+        self.total = 0
+        i = 0
+        status = True
+        file = './cq_gov_weblist.txt'
+        with open(file, mode = 'r') as f:
+            url = f.readlines()
+            for x in url:
+                n = self.doCrawl(x)
+                if n == -1:
+                    status = False
+                    break
+                else:
+                    i += n
+
+        if status:
+            if i > 0:
+                self.deleteFiles()
+                return 'complete', self.source, 'ok'
+            else:
+                return 'complete', 'none', 'ok'
+        else:
             return 'interrupt', 'none', 'error'
 
-        self.browser.find_element_by_xpath('/html/body').send_keys(Keys.END)
-        self.browser.find_element_by_xpath('/html/body').send_keys(Keys.HOME)
+
+    def doCrawl(self, url):
+        self.i = 0
+        try:
+            self.browser.get(url)
+        except TimeoutException:
+            return -1
 
         while True:
-            newsList = self.browser.find_elements_by_css_selector('div.newslist > ul.cb > li.clearfix')
-            for item in newsList:
-                dateTime = item.find_element_by_css_selector('dl > dd > p > span').text
-                if dateTime in self.date:
-                    self.extract(item)
+            i = 0
+            if 'zfxxgknb' in url or 'fdzdgknr' in url:
+                newsList = self.browser.find_elements_by_css_selector('div.main-right > ul > li')
+            else:
+                newsList = self.browser.find_elements_by_css_selector('div.center > ul.center-list > li')
 
+            for item in newsList:
+                if 'fdzdgknr' in url and i == 0:
+                    i += 1
+                    continue
+
+                dateTime = item.find_element_by_tag_name('span').text
+
+                if self.date in dateTime:
+                    self.extract(item)
+                else:
+                    break
 
             if self.i < len(newsList):  # 如果当前采集的数量小于当前页的条数，就不翻页了
                 break
             else:
-                # 点击下一页
-                btn = self.browser.find_elements_by_css_selector('div#bodyContent_AspPagerShop > a')
-                for a in btn:
-                    if a.text == '下一页':
-                        a.click()
-                        break
+                self.i = 0
+                try:
+                    self.browser.find_element_by_css_selector('a.last-page').click()  # 点击下一页
+                except NoSuchElementException:
+                    break
 
         if self.total > 0:
-            # self.rename()
-            # self.expire()
+            self.rename()
+            self.expire()
 
-            return 'complete', str(self.total), 'ok'
+            return self.total
+        else:
+            return 0
 
 
     # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_css_selector('dl > dd > h3 > a')
+        titleInfo = item.find_element_by_tag_name('a')
+
         try:
             href = titleInfo.get_attribute('href')
             md5 = self.makeMD5(href)
@@ -70,7 +103,7 @@ class Agro:
             if md5 in self.d:
                 return
             else:
-                self.d[md5] = self.date.split(' ')[0]  # 往dict里插入记录
+                self.d[md5] = self.date.strip(' ')[0]  # 往dict里插入记录
                 self.i += 1
                 self.total += 1
 
@@ -95,22 +128,26 @@ class Agro:
         except (NoSuchElementException, NoSuchAttributeException) as e:
             print('Element error:', e)
         except Exception:
-            pass
+            return
 
 
     def getPageText(self):  # 获取网页正文
-        pageTitle = self.browser.find_element_by_css_selector('h1.title').get_attribute('outerHTML')
-        pageHTML = self.browser.find_element_by_css_selector('div#cont_newstxt').get_attribute('innerHTML')
-        # pureHTML = remove_comments(pageHTML)
-        html = pageTitle + pageHTML
+        try:
+            html = self.browser.find_element_by_css_selector('div.trs_web').get_attribute('innerHTML')
+        except NoSuchElementException:
+            try:
+                html = self.browser.find_element_by_css_selector('div.zwxl-article').get_attribute('innerHTML')
+            except:
+                html = self.browser.page_source
+
 
         return html
 
 
     # 生成md5信息
-    def makeMD5(self, link):
+    def makeMD5(self, title):
         m = hashlib.md5()
-        b = link.encode(encoding = 'utf-8')
+        b = title.encode(encoding = 'utf-8')
         m.update(b)
         enc = m.hexdigest()
 
@@ -132,7 +169,7 @@ class Agro:
 
         # 更新txt文件
         try:
-            fileName = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/md5.txt'
+            fileName = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/cq_md5.txt'
             os.remove(fileName)
             with open(fileName, 'a+') as f:
                 f.write(str(self.d))
@@ -152,19 +189,26 @@ class Agro:
             pass
 
 
-if __name__ == '__main__':
-    d = {}
-    file = './md5.txt'
-    try:
-        with open(file, mode = 'r') as f:
-            line = f.readline()
-            if line != '':
-                d = eval(str(line))  # 直接把字符串转成字典格式
-    except:
-        # 如果没有文件，则直接创建文件
-        fd = open(file, mode = 'a+', encoding = 'utf-8')
-        fd.close()
+    def deleteFiles(self):
+        filePath = '/root/estar_save/cq_gov/'
+        timeStamp = time.time()
+        timeArray = time.localtime(timeStamp)
+        current = time.strftime("%Y-%m-%d", timeArray)
+        name = os.listdir(filePath)
 
-    a = Agro(d)
-    number = a.crawl()
-    print(number)
+        for i in name:
+            try:
+                fileName = filePath + i
+                fileInfo = os.stat(fileName)
+            except FileNotFoundError:
+                continue
+            ts = fileInfo.st_mtime
+            timeArr = time.localtime(ts)
+            date = time.strftime("%Y-%m-%d", timeArr)
+            if current != date:
+                os.remove(fileName)
+
+
+if __name__ == '__main__':
+    cq = Chongqing({})
+    cq.cralw()

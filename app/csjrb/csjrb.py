@@ -61,12 +61,13 @@ class Csjrb:
         title = info.text
         md5 = self.makeMD5(href)
 
-        # # dict filter
-        # if md5 in self.d:
-        #     return
-        # else:
-        #     self.d[md5] = self.date  # 往dict里插入记录
-        #     self.i += 1
+        # dict filter
+        if md5 in self.d:
+            return
+        else:
+            self.d[md5] = self.date  # 往dict里插入记录
+            self.i += 1
+
         print(href, '====', title)
         handle = self.browser.current_window_handle  # 拿到当前页面的handle
         info.click()
