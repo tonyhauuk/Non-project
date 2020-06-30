@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-class Chongqing:
+class Hbia:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -19,14 +19,14 @@ class Chongqing:
         self.debug = True
 
     def crawl(self):
-        print('\n' ,'-' * 10, 'http://jjxxw.cq.gov.cn', '-' * 10)
+        print('\n' ,'-' * 10, 'http://www.hbia.cn/', '-' * 10)
 
         self.browser = webdriver.Firefox()
         self.browser.set_window_position(x = 650, y = 0)
-        self.total = 0
+
         i = 0
         status = True
-        file = './cq_gov_weblist.txt'
+        file = './hbia_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
@@ -54,39 +54,30 @@ class Chongqing:
         except TimeoutException:
             return -1
 
-        while True:
-            i = 0
-            if 'zfxxgknb' in url or 'fdzdgknr' in url:
-                newsList = self.browser.find_elements_by_css_selector('div.main-right > ul > li')
-            else:
-                newsList = self.browser.find_elements_by_css_selector('div.center > ul.center-list > li')
+        tbody = self.browser.find_element_by_xpath('/html/body/table[3]/tbody/tr/td[2]/table/tbody/tr/td[1]/table/tbody/tr/td/table/tbody')
+        newsList = tbody.find_elements_by_tag_name('tr')
 
-            for item in newsList:
-                if 'fdzdgknr' in url and i == 0:
-                    i += 1
-                    continue
+        for i in range(len(newsList)):
+            tbody = self.browser.find_element_by_xpath('/html/body/table[3]/tbody/tr/td[2]/table/tbody/tr/td[1]/table/tbody/tr/td/table/tbody')
+            newsList = tbody.find_elements_by_tag_name('tr')
+            if i == 0:
+                continue
 
-                dateTime = item.find_element_by_tag_name('span').text
-
-                if self.date in dateTime:
+            try:
+                dateTime = newsList[i].find_elements_by_tag_name('td')[2].text
+                if dateTime in self.date:
+                    item = newsList[i].find_elements_by_tag_name('td')[1]
                     self.extract(item)
                 else:
                     break
-
-            if self.i < len(newsList):  # 如果当前采集的数量小于当前页的条数，就不翻页了
+            except IndexError:
                 break
-            else:
-                self.i = 0
-                try:
-                    self.browser.find_element_by_css_selector('a.last-page').click()  # 点击下一页
-                except NoSuchElementException:
-                    break
 
-        if self.total > 0:
+        if self.i > 0:
             self.rename()
             self.expire()
 
-            return self.total
+            return self.i
         else:
             return 0
 
@@ -99,46 +90,31 @@ class Chongqing:
             href = titleInfo.get_attribute('href')
             md5 = self.makeMD5(href)
 
-            # dict filter
             if md5 in self.d:
                 return
             else:
                 self.d[md5] = self.date.strip(' ')[0]  # 往dict里插入记录
                 self.i += 1
-                self.total += 1
 
             title = titleInfo.text
-
-            handle = self.browser.current_window_handle  # 拿到当前页面的handle
             titleInfo.click()
-
-            # switch tab window
-            WebDriverWait(self.browser, 10).until(EC.number_of_windows_to_be(2))
-            handles = self.browser.window_handles
-            for newHandle in handles:
-                if newHandle != handle:
-                    self.browser.switch_to.window(newHandle)    # 切换到新标签
-                    sleep(2)                                    # 等个几秒钟
-                    self.source = self.getPageText()            # 拿到网页源码
-                    self.browser.close()                        # 关闭当前标签页
-                    self.browser.switch_to.window(handle)       # 切换到之前的标签页
-                    break
+            self.source = self.getPageText()            # 拿到网页源码
+            self.browser.back()
 
             # self.write_new_file(href, title, self.source, self.i, self.date)
         except (NoSuchElementException, NoSuchAttributeException) as e:
             print('Element error:', e)
+            self.i -= 1
         except Exception:
+            self.i -= 1
             return
 
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('div.trs_web').get_attribute('innerHTML')
+            html = self.browser.find_element_by_css_selector('div#page_0').get_attribute('innerHTML')
         except NoSuchElementException:
-            try:
-                html = self.browser.find_element_by_css_selector('div.zwxl-article').get_attribute('innerHTML')
-            except:
-                html = self.browser.page_source
+            html = self.browser.page_source
 
 
         return html
@@ -169,7 +145,7 @@ class Chongqing:
 
         # 更新txt文件
         try:
-            fileName = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/cq_md5.txt'
+            fileName = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/hbia_md5.txt'
             os.remove(fileName)
             with open(fileName, 'a+') as f:
                 f.write(str(self.d))
@@ -190,7 +166,7 @@ class Chongqing:
 
 
     def deleteFiles(self):
-        filePath = '/root/estar_save/cq_gov/'
+        filePath = '/root/estar_save/hbia_gov/'
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
         current = time.strftime("%Y-%m-%d", timeArray)
@@ -209,6 +185,24 @@ class Chongqing:
                 os.remove(fileName)
 
 
+    def initDict(self):
+        d = {}
+        file = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/hbia_md5.txt'
+        try:
+            with open(file, mode = 'r') as f:
+                line = f.readline()
+                if line != '':
+                    d = eval(str(line))  # 直接把字符串转成字典格式
+
+            return d
+        except:
+            # 如果没有文件，则直接创建文件
+            fd = open(file, mode = 'a+', encoding = 'utf-8')
+            fd.close()
+
+            return d
+
+
 if __name__ == '__main__':
-    cq = Chongqing({})
-    cq.cralw()
+    hbia = Hbia({})
+    hbia.cralw()

@@ -62,11 +62,7 @@ class Iac:
                     self.extract(item)
                 else:
                     break
-        # else:
-        #     tbody = self.browser.find_element_by_xpath('//*[@id="lst"]/table[2]/tbody')
-        #     newsList = tbody.find_elements_by_tag_name('tr')
-        #     for item in newsList:
-        #         self.other(item)
+
 
 
         if self.i > 0:
