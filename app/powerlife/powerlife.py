@@ -7,48 +7,62 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+#import crawlerfun
 
-
-class Cnstock:
+class Powerlife:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
         self.date = time.strftime('%Y-%m-%d %H:%M:%S', timeArray)
         self.d = d
-        self.dir = self._dir = ''
+        self.dir = self._dir = self.source = ''
         # self.ipnum = crawlerfun.ip2num('61.130.181.229')
         self.debug = True
 
 
     def crawl(self):
+        print('\n', '-' * 10, 'www.powerlife.com.cn', '-' * 10, '\n')
         self.i = 0
         self.browser = webdriver.Firefox()
-        self.browser.set_window_position(x = 700, y = 0)
+        self.browser.set_window_position(x = 690, y = 0)
         n = 0
 
-        webLst = ['http://company.cnstock.com/company/scp_gsxw', 'http://ggjd.cnstock.com/company/scp_ggjd/tjd_bbdj',
-                  'http://ggjd.cnstock.com/company/scp_ggjd/tjd_ggkx']
-        for url in webLst:
+        keywords = [ '/news', '/advise', '/drive', '/pile', '/life']
+        for keyword in keywords:
+            self.keyword = keyword
             try:
+                url = 'https://www.powerlife.com.cn/article' + keyword
                 self.browser.get(url)
             except TimeoutException:
                 n = -1
                 break
 
-            newsList = self.browser.find_elements_by_css_selector('div.bd > ul > li.newslist')
-            for item in newsList:
-                dateTime = item.find_element_by_tag_name('span').text
-                if '-' not in dateTime:
-                    self.extract(item)
-                else:
+            while True:
+                newsList = self.browser.find_elements_by_css_selector('div.con-box > ul.article-list > li.cl')
+                length = len(newsList)
+                for item in newsList:
+                    dateTime = item.find_element_by_css_selector('div.wenzi > div.qita > div.date > span').text
+                    print('date time:', dateTime)
+                    if '-' not in dateTime:
+                        self.extract(item)
+                    else:
+                        break
+
+                if self.i < length:
                     break
+                else:
+                    try:
+                        self.browser.find_element_by_css_selector('div.more_con > a').click()
+                    except NoSuchElementException:
+                        break
+
 
         print('quantity:', self.i)
         if n == 0:
             if self.i > 0:
-                self.rename()
-                self.expire()
-                self.deleteFiles()
+                # self.rename()
+                # self.expire()
+                # self.deleteFiles()
 
                 return 'complete', self.source, 'ok'
             else:
@@ -59,7 +73,8 @@ class Cnstock:
 
     # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_css_selector('h2 > a')
+        titleInfo = item.find_element_by_css_selector('h1 > a')
+
         try:
             href = titleInfo.get_attribute('href')
             md5 = self.makeMD5(href)
@@ -87,23 +102,18 @@ class Cnstock:
                     sleep(2)                                    # 等个几秒钟
                     self.browser.switch_to.window(handle)       # 切换到之前的标签页
                     break
-            if self.debug:
-                print('count:', self.i, ' --- ', title)
-            # self.write_new_file(href, title, self.source, self.i, self.date)
-        except (NoSuchElementException, NoSuchAttributeException) as e:
-            print('Element error:', e)
+
+            # self.write_new_file(href, title, self.source, self.i, self.date, 1161565)
         except Exception:
+            self.i -= 1
             pass
 
 
     def getPageText(self):  # 获取网页正文
         try:
-            pageHTML = self.browser.find_element_by_css_selector('div.content').get_attribute('innerHTML')
+            pageHTML = self.browser.find_element_by_css_selector('div.post-content').get_attribute('innerHTML')
         except NoSuchElementException:
-            try:
-                pageHTML = self.browser.find_element_by_css_selector('div.rich_media_content').get_attribute('innerHTML')
-            except NoSuchElementException:
-                pageHTML = self.browser.page_source
+            pageHTML = self.browser.page_source
 
         return pageHTML
 
@@ -173,5 +183,5 @@ class Cnstock:
 
 
 if __name__ == '__main__':
-    stock = Cnstock({})
-    stock.crawl()
+    p = Powerlife({})
+    p.crawl()

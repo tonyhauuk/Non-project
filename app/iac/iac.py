@@ -25,7 +25,7 @@ class Iac:
 
         i = 0
         status = True
-        file = 'iac_weblist.txt'
+        file = './iac_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
