@@ -7,7 +7,8 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-
+from w3lib.html import remove_comments
+#import crawlerfun
 
 class Banking:
     def __init__(self, d):
@@ -22,20 +23,21 @@ class Banking:
         print('\n' ,'-' * 10, 'www.cbirc.gov.cn', '-' * 10)
 
         self.browser = webdriver.Firefox()
-        self.browser.set_window_position(x = 690, y = 0)
+        self.browser.set_window_position(x = 680, y = 0)
         self.total = 0
         i = 0
         status = True
         file = './bank_weblist.txt'
         with open(file, mode = 'r') as f:
-            url = f.readlines()
-            for x in url:
-                n = self.doCrawl(x)
-                if n == -1:
-                    status = False
-                    break
-                else:
-                    i += n
+            urls = f.readlines()
+            for url in urls:
+                if 'zhengwuxinxi' in url:
+                    n = self.doCrawl(url)
+                # if n == -1:
+                #     status = False
+                #     break
+                # else:
+                #     i += n
 
         if status:
             if i > 0:
@@ -48,36 +50,35 @@ class Banking:
 
 
     def doCrawl(self, url):
+        itemName = self.getItemName(url)
+        self.browser = webdriver.Firefox()
+        self.browser.set_window_position(x = 680, y = 0)
         self.i = 0
         try:
             self.browser.get(url)
         except TimeoutException:
             return -1
 
-        if 'zhengwuxinxi' in url:  # 政务信息栏目下的第一条，政府公开信息单独采集，页面都不一样
-            n = self.particular()
-            return n
 
         while True:  # 翻页的循环
-            rightList = self.browser.find_elements_by_css_selector('div.ng-scope > div.list.caidan-right-list')  # 获取右边标题list的信息
-            if len(rightList) > 0:
+            if 'xinwenzixun' in url:    # 新闻资讯 -> 新闻发布会及访谈
+                rightList = self.browser.find_element_by_css_selector('div.list.caidan-ritht-xinwenfabu')
+                length = self.otherCrawl(rightList)
+                if self.i == 0 or self.i < length:
+                    break
+            elif 'zhengwuxinxi' in url:     # 政务信息 -> 政府信息公开
+                length = self.particularCrawl()
+                if self.i == 0 or self.i < length:
+                    break
+            else:       # 其他页面的通用采集
+                rightList = self.browser.find_elements_by_css_selector('div.ng-scope > div.list.caidan-right-list')  # 获取右边标题list的信息
                 length = self.normalCrawl(rightList)
                 if self.i == 0 or self.i < length:
                     break
-            else:
-                try:
-                    rightList = self.browser.find_element_by_css_selector('div.list.caidan-ritht-xinwenfabu')
-                    length = self.otherCrawl(rightList)
-                except NoSuchElementException:
-                    length = self.particularCrawl()  # 非正常页面采集
-
-                if self.i == 0 or self.i < length:
-                    break
-
-            self.i = 0  # 当前页计数器清零
 
             try:
                 self.browser.find_element_by_css_selector('a[ng-click="pager.next()"]').click()  # 点击下一页
+                self.i = 0  # 当前页计数器清零
                 sleep(2)
             except NoSuchElementException:
                 break
@@ -107,12 +108,36 @@ class Banking:
         return length
 
 
+
+    def particularCrawl(self):
+        li = self.browser.find_elements_by_css_selector('div > ul.ng-scope > li.ng-scope')
+        for info in li:
+            dateTime = info.find_element_by_css_selector('span.zhengfuxinxi-list-date.ng-binding').text
+            if dateTime == self.date.split(' ')[0]:
+                self.extract(info)
+
+        return len(li)
+
+
+    # 非正常页面采集, 跟大部分网页不同，“新闻发布会及访谈” 频道用
+    def otherCrawl(self, item):
+        blocks = item.find_elements_by_css_selector('div.panels.ng-scope')  # 获取条数
+        for block in blocks:
+            dateTime = block.find_element_by_css_selector('span.date.ng-binding').text
+            if dateTime == self.date.split(' ')[0]:
+                self.extract(block)
+
+            sleep(2)
+
+        return len(blocks)
+
+
     # 提取信息，一条的
     def extract(self, item):
         try:
-            titleInfo = item.find_element_by_css_selector('span > a.ng-binding')        # normal & particular
+            titleInfo = item.find_element_by_css_selector('span > a.ng-binding')  # normal & particular
         except NoSuchElementException:
-            titleInfo = item.find_element_by_css_selector('div.title > a.ng-binding')   # other
+            titleInfo = item.find_element_by_css_selector('div.title > a.ng-binding')  # other
 
         try:
             href = titleInfo.get_attribute('href')
@@ -135,11 +160,11 @@ class Banking:
             handles = self.browser.window_handles
             for newHandle in handles:
                 if newHandle != handle:
-                    self.browser.switch_to.window(newHandle)    # 切换到新标签
-                    sleep(1)                                    # 等个几秒钟
-                    self.source = self.getPageText()            # 拿到网页源码
-                    self.browser.close()                        # 关闭当前标签页
-                    self.browser.switch_to.window(handle)       # 切换到之前的标签页
+                    self.browser.switch_to.window(newHandle)  # 切换到新标签
+                    sleep(1)  # 等个几秒钟
+                    self.source = self.getPageText()  # 拿到网页源码
+                    self.browser.close()  # 关闭当前标签页
+                    self.browser.switch_to.window(handle)  # 切换到之前的标签页
                     break
 
             # self.write_new_file(href, title, self.source, self.i, self.date, 1170841)
@@ -148,72 +173,11 @@ class Banking:
             self.total -= 1
 
 
-    # 特殊页面采集
-    def particular(self):
-        if self.debug:
-            print('=== 政府信息公开 === 页面采集')
-
-        self.browser.find_element_by_xpath('/html/body').send_keys(Keys.END)
-        sleep(1)
-        self.browser.find_element_by_xpath('/html/body').send_keys(Keys.HOME)
-
-        moreList = self.browser.find_elements_by_css_selector('div.list.ng-scope > div.zhengfuxinxi-list.mb25.ng-scope > div.zhengfuxinxi-list-tabmore a')
-        for i in range(len(moreList)):  # 点击更多, 如果没有略过
-            try:
-                self.browser.find_elements_by_css_selector('div.list.ng-scope > div.zhengfuxinxi-list.mb25.ng-scope > div.zhengfuxinxi-list-tabmore a')[i].click()
-                sleep(1)
-                self.rightCrawl()
-                self.browser.back()
-                sleep(1)
-                self.browser.find_elements_by_css_selector('div.list.ng-scope > div.zhengfuxinxi-list.mb25.ng-scope > div.zhengfuxinxi-list-tabmore a')  # 重新获取element对象
-                sleep(2)
-            except IndexError:
-                break
-            except StaleElementReferenceException:
-                print('Particular StaleElementException')
-
-        if self.total > 0:
-            self.rename()
-            self.expire()
-            return self.total
-        else:
-            return 0
-
-
-    def particularCrawl(self):
-        li = self.browser.find_elements_by_css_selector('div > ul.ng-scope > li.ng-scope')
-        for info in li:
-            dateTime = info.find_element_by_css_selector('span.zhengfuxinxi-list-date.ng-binding').text
-            if dateTime in self.date:
-                self.extract(info)
-
-        return len(li)
-
-
-    # 非正常页面采集, 跟大部分网页不同
-    def otherCrawl(self, item):
-        divs = item.find_elements_by_css_selector('div.panels.ng-scope')  # 获取条数
-        for div in divs:
-            try:
-                dateTime = div.find_element_by_css_selector('span.date.ng-binding').text
-                if dateTime in self.date:
-                    self.extract(div)
-            except StaleElementReferenceException:
-                dateTime = div.find_element_by_css_selector('span.date.ng-binding').text
-                if dateTime in self.date:
-                    self.extract(div)
-
-            sleep(2)
-
-        return len(divs)
-
-
     def getPageText(self):  # 获取网页正文
-        try:
-            html = self.browser.find_element_by_css_selector('div#page_0').get_attribute('innerHTML')
-        except NoSuchElementException:
-            html = self.browser.page_source
-
+        pageTitle = self.browser.find_element_by_css_selector('div.container div.row > div[ng-show="showTitle"]').get_attribute('outerHTML')
+        pageHTML = self.browser.find_element_by_css_selector('div.container div.row > div#wenzhang-content').get_attribute('innerHTML')
+        pureHTML = remove_comments(pageHTML)
+        html = pageTitle + pureHTML
 
         return html
 
@@ -243,7 +207,7 @@ class Banking:
 
         # 更新txt文件
         try:
-            fileName = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/hbia_md5.txt'
+            fileName = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/md5.txt'
             os.remove(fileName)
             with open(fileName, 'a+') as f:
                 f.write(str(self.d))
@@ -264,7 +228,7 @@ class Banking:
 
 
     def deleteFiles(self):
-        filePath = '/root/estar_save/hbia_gov/'
+        filePath = '/root/estar_save/bank_gov/'
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
         current = time.strftime("%Y-%m-%d", timeArray)
@@ -285,7 +249,7 @@ class Banking:
 
     def initDict(self):
         d = {}
-        file = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/hbia_md5.txt'
+        file = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/md5.txt'
         try:
             with open(file, mode = 'r') as f:
                 line = f.readline()

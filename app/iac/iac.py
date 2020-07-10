@@ -56,12 +56,14 @@ class Iac:
 
         if 'macrodb' not in url:
             newsList = self.browser.find_elements_by_css_selector('div.lst > ul > li')
+            sleep(2)
             for item in newsList:
                 dateTime = item.find_element_by_css_selector('div.date.fr').text
                 if dateTime in self.date:
                     self.extract(item)
                 else:
                     break
+
 
 
 
