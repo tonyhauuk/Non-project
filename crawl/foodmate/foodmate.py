@@ -33,7 +33,7 @@ class Foodmate:
         for keyword in keywords:
             self.keyword = keyword
             try:
-                url = 'http://news.foodmate.net/' + keyword
+                url = 'http://news.foodmate.net' + keyword
                 self.browser.get(url)
             except TimeoutException:
                 n = -1
@@ -93,7 +93,7 @@ class Foodmate:
             titleInfo.click()
 
             # switch tab window
-            WebDriverWait(self.browser, 10).util(EC.number_of_windows_to_be(2))
+            WebDriverWait(self.browser, 10).until(EC.number_of_windows_to_be(2))
             handles = self.browser.window_handles
             for newHandle in handles:
                 if newHandle != handle:
@@ -104,8 +104,7 @@ class Foodmate:
                     self.browser.switch_to.window(handle)           # 切换到之前的标签页
                     break
 
-            if self.debug:
-                print('count:', self.i, ' === ', title, ' ===')
+
 
             # self.write_new_file(href, title, self.source, self.i, 855436)
         except (NoSuchElementException, NoSuchAttributeException) as e:
