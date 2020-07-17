@@ -99,7 +99,7 @@ class Zytzb:
             if md5 in self.d:
                 return
             else:
-                self.d[md5] = self.date.strip(' ')[0]  # 往dict里插入记录
+                self.d[md5] = self.date.split(' ')[0]  # 往dict里插入记录
                 self.i += 1
                 self.total += 1
 
@@ -139,7 +139,7 @@ class Zytzb:
             if md5 in self.d:
                 return
             else:
-                self.d[md5] = self.date.strip(' ')[0]  # 往dict里插入记录
+                self.d[md5] = self.date.split(' ')[0]  # 往dict里插入记录
                 self.i += 1
 
             title = titleInfo.text
@@ -181,7 +181,7 @@ class Zytzb:
     def getImagePage(self):
         dateTime = self.browser.find_element_by_css_selector('div.date.fl').text
         print('date time:', dateTime)
-        if self.date.strip(' ')[0] in dateTime:
+        if self.date.split(' ')[0] in dateTime:
             try:
                 html = self.browser.find_element_by_css_selector('div.text_content').get_attribute('innerHTML')
             except NoSuchElementException:

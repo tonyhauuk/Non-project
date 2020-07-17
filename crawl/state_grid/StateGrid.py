@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+from selenium.webdriver.common.by import By
 import time, hashlib, os
 from time import sleep
 from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
@@ -30,6 +30,7 @@ class StateGrid:
         while True:     # 翻页循环
             newsList = self.browser.find_elements_by_css_selector('div.titleList > ul > li')
             for item in newsList:
+                dateTime = WebDriverWait(self.browser, 5, 0.5).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'td:nth-child(2)')))
                 dateTime = item.find_element_by_css_selector('div.titleList_02').text
                 if dateTime in self.date:
                     self.extract(item)

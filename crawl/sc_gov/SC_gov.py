@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-class Chongqing:
+class Sc_gov:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -19,18 +19,19 @@ class Chongqing:
         self.debug = True
 
     def crawl(self):
-        print('\n' ,'-' * 10, 'http://jjxxw.cq.gov.cn', '-' * 10)
+        print('\n' ,'-' * 10, 'https://jxt.sc.gov.cn', '-' * 10)
 
         self.browser = webdriver.Firefox()
         self.browser.set_window_position(x = 650, y = 0)
         self.total = 0
         i = 0
         status = True
-        file = './cq_gov_weblist.txt'
+        file = './sc_gov_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
                 n = self.doCrawl(x)
+                break
                 if n == -1:
                     status = False
                     break
@@ -55,32 +56,35 @@ class Chongqing:
             return -1
 
         while True:
-            i = 0
-            if 'zfxxgknb' in url or 'fdzdgknr' in url:
-                newsList = self.browser.find_elements_by_css_selector('div.main-right > ul > li')
+            if 'xxgklist' not in url:
+                newsCss = 'div.pad10 > ul.list-li > li'
+                dateCss = 'div > h1 > span'
             else:
-                newsList = self.browser.find_elements_by_css_selector('div.center > ul.center-list > li')
+                newsCss = 'div > table > tbody > tr > td > table:nth-child(1) > tbody > tr'
+                dateCss = 'td:nth-child(3)'
 
+            newsList = self.browser.find_elements_by_css_selector(newsCss)
             for item in newsList:
-                if 'fdzdgknr' in url and i == 0:
-                    i += 1
-                    continue
+                dateTime = item.find_element_by_css_selector(dateCss).text
 
-                dateTime = item.find_element_by_tag_name('span').text
-
-                if self.date in dateTime:
+                if dateTime in self.date:
                     self.extract(item)
+                elif '发布日期' == dateTime:
+                    continue
                 else:
                     break
+            break
 
             if self.i < len(newsList):  # 如果当前采集的数量小于当前页的条数，就不翻页了
                 break
             else:
                 self.i = 0
                 try:
-                    self.browser.find_element_by_css_selector('a.last-page').click()  # 点击下一页
+                    self.browser.find_element_by_name('下一页').click()  # 点击下一页
                 except NoSuchElementException:
                     break
+
+
 
         if self.total > 0:
             self.rename()
@@ -93,7 +97,7 @@ class Chongqing:
 
     # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_tag_name('a')
+        titleInfo = item.find_element_by_css_selector('div > h1 > div > a')
 
         try:
             href = titleInfo.get_attribute('href')
@@ -133,11 +137,11 @@ class Chongqing:
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('div.trs_web').get_attribute('innerHTML')
+            html = self.browser.find_element_by_css_selector('div#NewsContent').get_attribute('innerHTML')
         except NoSuchElementException:
             try:
                 html = self.browser.find_element_by_css_selector('div.zwxl-article').get_attribute('innerHTML')
-            except:
+            except NoSuchElementException:
                 html = self.browser.page_source
 
 
@@ -169,7 +173,7 @@ class Chongqing:
 
         # 更新txt文件
         try:
-            fileName = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/cq_md5.txt'
+            fileName = '/home/zran/src/crawler/31/manzhua/crawlpy3/record/sc_md5.txt'
             os.remove(fileName)
             with open(fileName, 'a+') as f:
                 f.write(str(self.d))
@@ -190,7 +194,7 @@ class Chongqing:
 
 
     def deleteFiles(self):
-        filePath = '/root/estar_save/cq_gov/'
+        filePath = '/root/estar_save/sc_gov/'
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
         current = time.strftime("%Y-%m-%d", timeArray)
@@ -210,5 +214,5 @@ class Chongqing:
 
 
 if __name__ == '__main__':
-    cq = Chongqing({})
-    cq.crawl()
+    sc = Sc_gov({})
+    sc.crawl()
