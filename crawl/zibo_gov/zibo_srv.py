@@ -16,11 +16,14 @@ class Zibo:
         self.date = time.strftime('%Y-%m-%d', timeArray)
         self.d = self.initDict()
         self.browser = browser.driver
-        self.dir = self._dir = ''
+        self.dir = self._dir = self.source = ''
         self.ipnum = crawlerfun.ip2num(browser.ip)
+        self.debug = True
 
 
     def crawl(self):
+        print('\n', '-' * 10, 'http://epb.zibo.gov.cn/index.html', '-' * 10, '\n')
+
         self.total = 0
         i = 0
         status = True
@@ -35,6 +38,7 @@ class Zibo:
                 else:
                     i += n
 
+        print('quantity:', self.total, '\n')
         if status:
             if i > 0:
                 self.deleteFiles()
@@ -67,7 +71,7 @@ class Zibo:
                 else:
                     break
 
-            if self.i < len(newsList):  # 如果当前抓取的数量小于页面展示的数量并且在第一页，就不翻页了
+            if self.i < len(newsList):  # 如果当前抓取的数量小于页面展示的数量，就不翻页了
                 break
             else:
                 try:
@@ -121,10 +125,9 @@ class Zibo:
                     self.browser.switch_to.window(handle)       # 切换到之前的标签页
                     break
 
-            self.write_new_file(href, title, self.source, self.i, 1168570)
+            self.write_new_file(href, title, self.source, self.i, self.date, 1168570)
         except (NoSuchElementException, NoSuchAttributeException) as e:
             print('Element error:', e)
-            print(item.find_element_by_tag_name('a').get_attribute('href'))
         except Exception:
             return
 
@@ -155,7 +158,7 @@ class Zibo:
     def expire(self):
         # 检查过期数据
         li = []
-        current = self.date.split(' ')[0]
+        current = self.date
         for k, v in self.d.items():
             if current != v:
                 li.append(k)
@@ -166,7 +169,7 @@ class Zibo:
 
         # 更新txt文件
         try:
-            fileName = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/zibo_md5.txt'
+            fileName = '/home/zran/src/crawler/31/manzhua/crawlpy3/record/zibo_md5.txt'
             os.remove(fileName)
             with open(fileName, 'a+') as f:
                 f.write(str(self.d))
@@ -188,7 +191,7 @@ class Zibo:
 
     def initDict(self):
         d = {}
-        file = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/zibo_md5.txt'
+        file = '/home/zran/src/crawler/31/manzhua/crawlpy3/record/zibo_md5.txt'
         try:
             with open(file, mode = 'r') as f:
                 line = f.readline()
@@ -207,7 +210,7 @@ class Zibo:
     # 写一个新文章
     def write_new_file(self, url, title, source, i, time, id):
         if self.debug:
-            print('count:', self.i, ' === ', url, ' ===')
+            print('count:', self.total, ' --- ', title)
 
         content = '''
                     <html>
@@ -232,8 +235,11 @@ class Zibo:
         filename = self._dir + 'iask_' + str(i) + '_' + str(len(self.d)) + '.htm-2'
         for num in range(2):
             if 1 == crawlerfun.write_file(filename, page_text, ifdisplay = 0):
-                fileName = '/root/estar_save/zibo/' + 'iask_' + str(i) + '_' + str(len(self.d)) + '.htm-2'
-                crawlerfun.write_file(fileName, page_text, ifdisplay = 0)  # 再次保存到/root/Downloads目录下
+                savePath = '/root/estar_save/zibo/'
+                if not os.path.exists(savePath):
+                    os.makedirs(savePath)
+                fileName = savePath + 'iask_' + str(i) + '_' + str(len(self.d)) + '.htm-2'
+                crawlerfun.write_file(fileName, page_text, ifdisplay = 0)  # 再次保存到/root/estar_save目录下
 
                 break
             else:  # 有时目录会被c程序删掉

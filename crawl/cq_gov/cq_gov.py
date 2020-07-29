@@ -68,7 +68,7 @@ class Chongqing:
 
                 dateTime = item.find_element_by_tag_name('span').text
 
-                if self.date in dateTime:
+                if dateTime in self.date:
                     self.extract(item)
                 else:
                     break

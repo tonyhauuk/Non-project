@@ -7,9 +7,9 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-#import crawlerfun
 
-class Qingdao:
+
+class Jjckb:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -19,14 +19,14 @@ class Qingdao:
         self.debug = True
 
     def crawl(self):
-        print('\n' ,'-' * 10, 'http://sjw.qingdao.gov.cn', '-' * 10, '\n')
+        print('\n' ,'-' * 10, 'http://jjckb.xinhuanet.com/', '-' * 10)
 
         self.browser = webdriver.Firefox()
         self.browser.set_window_position(x = 650, y = 0)
-        self.total = 0
+
         i = 0
         status = True
-        file = './qingdao_weblist.txt'
+        file = './jjckb_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
@@ -39,7 +39,7 @@ class Qingdao:
 
         if status:
             if i > 0:
-                self.deleteFiles()
+                # self.deleteFiles()
                 return 'complete', self.source, 'ok'
             else:
                 return 'complete', 'none', 'ok'
@@ -54,41 +54,53 @@ class Qingdao:
         except TimeoutException:
             return -1
 
-        while True:
-            try:
-                newsList = self.browser.find_elements_by_css_selector('div#listChangeDiv > ul.ul_list_list > li')
-            except NoSuchElementException:
-                newsList = self.browser.find_elements_by_css_selector('div.div_list_right > ul.ul_list_list_tab > ul.ul_list_list > li')
+        if 'sx_gjgc' not in url:
+            block = self.browser.find_element_by_class_name('box_left')
+            newsList = block.find_elements_by_css_selector('ul > li')
+            for item in newsList:
+                dateTime = item.find_element_by_tag_name('span').text
+
+                if dateTime.split(' ')[0] in self.date:
+                    self.extract(item)
+                else:
+                    break
+        else:
+            timeStamp = time.time()
+            timeArray = time.localtime(timeStamp)
+            fmtDate = time.strftime('%Y-%m/%d', timeArray)
+
+            block = self.browser.find_element_by_xpath('/html/body/div[2]/table[2]/tbody/tr[2]/td[1]/table[2]/tbody')
+            newsList = block.find_elements_by_css_selector('tr > td > table > tbody > tr > td.black18')
 
             for item in newsList:
-                dateTime = item.find_element_by_css_selector('a > div.div_float_left.div_list_li_width_right').text
-                if self.date.split(' ')[0] in dateTime:
+                try:
+                    href = item.find_element_by_tag_name('a').get_attribute('href')
+                except NoSuchElementException:
+                    break
+
+                if fmtDate in href:
                     self.extract(item)
                 else:
                     break
 
-            if self.i < len(newsList):  # 如果当前采集的数量小于当前页的条数，就不翻页了
-                break
-            else:
-                self.i = 0
-                try:
-                    self.browser.find_element_by_css_selector('td.pagerTitle > a').click()  # 点击下一页
-                except NoSuchElementException:
-                    break
 
-        if self.total > 0:
-            # self.rename()
-            # self.expire()
 
-            return self.total
+
+        if self.i > 0:
+            self.rename()
+            self.expire()
+
+            return self.i
         else:
             return 0
 
 
     # 提取信息，一条的
     def extract(self, item):
+        titleInfo = item.find_element_by_tag_name(' a')
+
         try:
-            href = item.find_element_by_tag_name('a').get_attribute('href')
+            href = titleInfo.get_attribute('href')
             md5 = self.makeMD5(href)
 
             # dict filter
@@ -97,9 +109,7 @@ class Qingdao:
             else:
                 self.d[md5] = self.date.split(' ')[0]  # 往dict里插入记录
                 self.i += 1
-                self.total += 1
 
-            titleInfo = item.find_element_by_css_selector('a > div.hi-ellipses')
             title = titleInfo.text
 
             handle = self.browser.current_window_handle  # 拿到当前页面的handle
@@ -116,17 +126,17 @@ class Qingdao:
                     self.browser.close()                        # 关闭当前标签页
                     self.browser.switch_to.window(handle)       # 切换到之前的标签页
                     break
-
-            # self.write_new_file(href, title, self.source, self.i, self.date, 401443)
+            print(href, title)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 64759)
+        except (NoSuchElementException, NoSuchAttributeException) as e:
+            print('Element error:', e)
         except Exception:
-            self.i -= 1
-            self.total -= 1
             return
 
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('div.div_content_fat').get_attribute('innerHTML')
+            html = self.browser.find_element_by_css_selector('div.mainCon').get_attribute('innerHTML')
         except NoSuchElementException:
             html = self.browser.page_source
 
@@ -159,7 +169,7 @@ class Qingdao:
 
         # 更新txt文件
         try:
-            fileName = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/qd_md5.txt'
+            fileName = '/home/zran/src/crawler/31/manzhua/crawlpy3/record/sc_md5.txt'
             os.remove(fileName)
             with open(fileName, 'a+') as f:
                 f.write(str(self.d))
@@ -180,7 +190,7 @@ class Qingdao:
 
 
     def deleteFiles(self):
-        filePath = '/root/estar_save/qd_gov/'
+        filePath = '/root/estar_save/sc_gov/'
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
         current = time.strftime("%Y-%m-%d", timeArray)
@@ -200,5 +210,5 @@ class Qingdao:
 
 
 if __name__ == '__main__':
-    qd = Qingdao({})
-    qd.crawl()
+    sc = Jjckb({})
+    sc.crawl()

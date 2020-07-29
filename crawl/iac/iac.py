@@ -59,6 +59,8 @@ class Iac:
             sleep(2)
             for item in newsList:
                 dateTime = item.find_element_by_css_selector('div.date.fr').text
+                # dateTime = item.find_element_by_css_selector('nobr > a > div.date.fr').text
+                print('date time:', dateTime)
                 if dateTime in self.date:
                     self.extract(item)
                 else:

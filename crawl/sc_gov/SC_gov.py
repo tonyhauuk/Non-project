@@ -31,7 +31,6 @@ class Sc_gov:
             url = f.readlines()
             for x in url:
                 n = self.doCrawl(x)
-                break
                 if n == -1:
                     status = False
                     break
@@ -73,22 +72,21 @@ class Sc_gov:
                     continue
                 else:
                     break
-            break
 
             if self.i < len(newsList):  # 如果当前采集的数量小于当前页的条数，就不翻页了
                 break
             else:
-                self.i = 0
                 try:
                     self.browser.find_element_by_name('下一页').click()  # 点击下一页
+                    self.i = 0
                 except NoSuchElementException:
                     break
 
 
 
         if self.total > 0:
-            self.rename()
-            self.expire()
+            # self.rename()
+            # self.expire()
 
             return self.total
         else:
@@ -127,7 +125,7 @@ class Sc_gov:
                     self.browser.close()                        # 关闭当前标签页
                     self.browser.switch_to.window(handle)       # 切换到之前的标签页
                     break
-
+            print(href, title)
             # self.write_new_file(href, title, self.source, self.i, self.date)
         except (NoSuchElementException, NoSuchAttributeException) as e:
             print('Element error:', e)
