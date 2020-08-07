@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-class Sc_gov:
+class Hefei_gov:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -19,24 +19,26 @@ class Sc_gov:
         self.debug = True
 
     def crawl(self):
-        print('\n' ,'-' * 10, 'https://jxt.sc.gov.cn', '-' * 10, '\n')
+        print('\n' ,'-' * 10, 'http://yjj.hefei.gov.cn/index.html', '-' * 10, '\n')
 
         self.browser = webdriver.Firefox()
         self.browser.set_window_position(x = 650, y = 0)
         self.total = 0
         i = 0
         status = True
-        file = './sc_gov_weblist.txt'
+        file = './hefei_yj_gov_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
                 n = self.doCrawl(x)
+                break
                 if n == -1:
                     status = False
                     break
                 else:
                     i += n
 
+        print('quantity:', self.total)
         if status:
             if i > 0:
                 self.deleteFiles()
@@ -55,21 +57,20 @@ class Sc_gov:
             return -1
 
         while True:
-            if 'xxgklist' not in url:
-                newsCss = 'div.pad10 > ul.list-li > li'
-                dateCss = 'div > h1 > span'
+            if '14391' not in url:
+                newsCss = 'div.listnews > ul.doc_list > li'
+                dateCss = 'span'
             else:
-                newsCss = 'div > table > tbody > tr > td > table:nth-child(1) > tbody > tr'
-                dateCss = 'td:nth-child(3)'
+                newsCss = 'div.xxgk_nav_con.xxgk_nav_subcon > div'
+                dateCss = 'li.rq'
 
             newsList = self.browser.find_elements_by_css_selector(newsCss)
+
             for item in newsList:
                 dateTime = item.find_element_by_css_selector(dateCss).text
 
                 if dateTime in self.date:
                     self.extract(item)
-                elif '发布日期' == dateTime:
-                    continue
                 else:
                     break
 
@@ -95,7 +96,7 @@ class Sc_gov:
 
     # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_css_selector('div > h1 > div > a')
+        titleInfo = item.find_element_by_css_selector('a')
 
         try:
             href = titleInfo.get_attribute('href')
@@ -125,8 +126,8 @@ class Sc_gov:
                     self.browser.close()                        # 关闭当前标签页
                     self.browser.switch_to.window(handle)       # 切换到之前的标签页
                     break
-            print(href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 1163630)
+            print(href, title, self.source)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 401741)
         except (NoSuchElementException, NoSuchAttributeException) as e:
             print('Element error:', e)
         except Exception:
@@ -135,13 +136,12 @@ class Sc_gov:
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('div#NewsContent').get_attribute('innerHTML')
+            html = self.browser.find_element_by_css_selector('div.j-fontContent.newscontnet.minh500').get_attribute('innerHTML')
         except NoSuchElementException:
             try:
-                html = self.browser.find_element_by_css_selector('div.zwxl-article').get_attribute('innerHTML')
+                html = self.browser.find_element_by_css_selector('div#zoom').get_attribute('innerHTML')
             except NoSuchElementException:
                 html = self.browser.page_source
-
 
         return html
 
@@ -212,5 +212,5 @@ class Sc_gov:
 
 
 if __name__ == '__main__':
-    sc = Sc_gov({})
+    sc = Hefei_gov({})
     sc.crawl()

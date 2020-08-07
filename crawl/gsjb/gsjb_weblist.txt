@@ -1,0 +1,13 @@
+ http://www.gsjb.com/gsxw/index.shtml
+ http://www.gsjb.com/sdbd/index.shtml
+ http://www.gsjb.com/lyjj/index.shtml
+ http://www.gsjb.com/cjjr/index.shtml
+ http://www.gsjb.com/jjcy/index.shtml
+ http://www.gsjb.com/whly/index.shtml
+ http://www.gsjb.com/tsjj/index.shtml
+ http://www.gsjb.com/jjzk/index.shtml
+ http://www.gsjb.com/fpgj/index.shtml
+ http://www.gsjb.com/zbgg/index.shtml
+ http://www.gsjb.com/yjsgk/index.shtml
+
+ ['gsxw', 'sdbd', 'lyjj', 'cjjr', 'jjcy', 'whly', 'tsjj', 'jjzk', 'fpgj', 'zbgg', 'yjsgk']

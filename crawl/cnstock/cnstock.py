@@ -43,12 +43,12 @@ class Cnstock:
                 else:
                     break
 
-        print('quantity:', self.i)
+        print('quantity:', self.i, '\n')
         if n == 0:
             if self.i > 0:
-                self.rename()
-                self.expire()
-                self.deleteFiles()
+                # self.rename()
+                # self.expire()
+                # self.deleteFiles()
 
                 return 'complete', self.source, 'ok'
             else:
@@ -87,8 +87,8 @@ class Cnstock:
                     sleep(2)                                    # 等个几秒钟
                     self.browser.switch_to.window(handle)       # 切换到之前的标签页
                     break
-            if self.debug:
-                print('count:', self.i, ' --- ', title)
+
+            print('count:', self.i, ' --- ', href, title)
             # self.write_new_file(href, title, self.source, self.i, self.date)
         except (NoSuchElementException, NoSuchAttributeException) as e:
             print('Element error:', e)

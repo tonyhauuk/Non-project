@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-class Sc_gov:
+class Tianshui_gov:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -19,18 +19,19 @@ class Sc_gov:
         self.debug = True
 
     def crawl(self):
-        print('\n' ,'-' * 10, 'https://jxt.sc.gov.cn', '-' * 10, '\n')
+        print('\n' ,'-' * 10, 'http://www.tianshui.gov.cn/', '-' * 10)
 
         self.browser = webdriver.Firefox()
         self.browser.set_window_position(x = 650, y = 0)
         self.total = 0
         i = 0
         status = True
-        file = './sc_gov_weblist.txt'
+        file = './tianshui_gov_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
                 n = self.doCrawl(x)
+                break
                 if n == -1:
                     status = False
                     break
@@ -55,23 +56,23 @@ class Sc_gov:
             return -1
 
         while True:
-            if 'xxgklist' not in url:
-                newsCss = 'div.pad10 > ul.list-li > li'
-                dateCss = 'div > h1 > span'
+            if 'col40' not in url:
+                newsList = self.browser.find_elements_by_css_selector('div.bt-mod-wzpb-03 > ul > li')
+                for item in newsList:
+                    dateTime = item.find_element_by_class_name('bt-data-time').text
+
+                    if dateTime in self.date:
+                        self.extract(item)
+                    else:
+                        break
             else:
-                newsCss = 'div > table > tbody > tr > td > table:nth-child(1) > tbody > tr'
-                dateCss = 'td:nth-child(3)'
-
-            newsList = self.browser.find_elements_by_css_selector(newsCss)
-            for item in newsList:
-                dateTime = item.find_element_by_css_selector(dateCss).text
-
-                if dateTime in self.date:
-                    self.extract(item)
-                elif '发布日期' == dateTime:
-                    continue
-                else:
-                    break
+                newsList = self.browser.find_elements_by_css_selector('div#div40 > table > tbody > tr > td > table:nth-child(2) > tbody > tr')
+                for item in newsList[1:]:
+                    dateTime = item.find_element_by_xpath('td[3]').text
+                    if dateTime in self.date:
+                        self.extract(item)
+                    else:
+                        break
 
             if self.i < len(newsList):  # 如果当前采集的数量小于当前页的条数，就不翻页了
                 break
@@ -95,7 +96,7 @@ class Sc_gov:
 
     # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_css_selector('div > h1 > div > a')
+        titleInfo = item.find_element_by_tag_name('a')
 
         try:
             href = titleInfo.get_attribute('href')
@@ -126,7 +127,7 @@ class Sc_gov:
                     self.browser.switch_to.window(handle)       # 切换到之前的标签页
                     break
             print(href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 1163630)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 15121)
         except (NoSuchElementException, NoSuchAttributeException) as e:
             print('Element error:', e)
         except Exception:
@@ -134,13 +135,18 @@ class Sc_gov:
 
 
     def getPageText(self):  # 获取网页正文
+        currentURL = self.browser.current_url
+        html = ''
         try:
-            html = self.browser.find_element_by_css_selector('div#NewsContent').get_attribute('innerHTML')
+            if 'tianshui.gov.cn' in currentURL:
+                html = self.browser.find_element_by_css_selector('div.main-txt1').get_attribute('innerHTML')
+            elif 'gansu.gov.cn' in currentURL:
+                html = self.browser.find_element_by_css_selector('div#zoom').get_attribute('innerHTML')
+            elif 'www.gov.cn' in currentURL:
+                html = self.browser.find_element_by_css_selector('div.pages_content').get_attribute('innerHTML')
+
         except NoSuchElementException:
-            try:
-                html = self.browser.find_element_by_css_selector('div.zwxl-article').get_attribute('innerHTML')
-            except NoSuchElementException:
-                html = self.browser.page_source
+            html = self.browser.page_source
 
 
         return html
@@ -212,5 +218,5 @@ class Sc_gov:
 
 
 if __name__ == '__main__':
-    sc = Sc_gov({})
-    sc.crawl()
+    ts = Tianshui_gov({})
+    ts.crawl()

@@ -7,9 +7,9 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+#import crawlerfun
 
-
-class Sc_gov:
+class Qianxinan_gov:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -19,14 +19,15 @@ class Sc_gov:
         self.debug = True
 
     def crawl(self):
-        print('\n' ,'-' * 10, 'https://jxt.sc.gov.cn', '-' * 10, '\n')
+        print('\n' ,'-' * 10, 'http://www.qxn.gov.cn/', '-' * 10, '\n')
 
         self.browser = webdriver.Firefox()
         self.browser.set_window_position(x = 650, y = 0)
+
         self.total = 0
         i = 0
         status = True
-        file = './sc_gov_weblist.txt'
+        file = './qianxinan_gov_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
@@ -53,26 +54,40 @@ class Sc_gov:
             self.browser.get(url)
         except TimeoutException:
             return -1
+        except:
+            return 0
 
         while True:
-            if 'xxgklist' not in url:
-                newsCss = 'div.pad10 > ul.list-li > li'
-                dateCss = 'div > h1 > span'
+            if 'fdzdgknr' in url:
+                newsCss = 'div.zfxxgk_zdgkc > ul > li'
+                dateCss = 'b'
+            elif 'jyzx_' in url:
+                newsCss = 'div.NewsList > ul.list > li'
+                dateCss = 'span'
+            # elif 'ggfw' in url:
+            #     newsCss = 'div.clist.mb5 > ul.p5 > li'
             else:
-                newsCss = 'div > table > tbody > tr > td > table:nth-child(1) > tbody > tr'
-                dateCss = 'td:nth-child(3)'
+                newsCss = 'div.con > ul.list.mb5 > li'
+                dateCss = 'span'
 
             newsList = self.browser.find_elements_by_css_selector(newsCss)
-            for item in newsList:
-                dateTime = item.find_element_by_css_selector(dateCss).text
+            if len(newsList) == 0:
+                newsList = self.browser.find_elements_by_css_selector('div.clist.mb5 > ul > li')
 
-                if dateTime in self.date:
+
+            for item in newsList:
+                try:
+                    dateTime = item.find_element_by_tag_name('span').text
+                except NoSuchElementException:
+                    dateTime = item.find_element_by_tag_name('b').text
+
+
+                if  self.date.split(' ')[0] in self.getTime(dateTime):
+                    print('time:', self.getTime(dateTime))
                     self.extract(item)
-                elif '发布日期' == dateTime:
-                    continue
                 else:
                     break
-
+            break
             if self.i < len(newsList):  # 如果当前采集的数量小于当前页的条数，就不翻页了
                 break
             else:
@@ -95,7 +110,7 @@ class Sc_gov:
 
     # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_css_selector('div > h1 > div > a')
+        titleInfo = item.find_element_by_tag_name('a')
 
         try:
             href = titleInfo.get_attribute('href')
@@ -126,7 +141,8 @@ class Sc_gov:
                     self.browser.switch_to.window(handle)       # 切换到之前的标签页
                     break
             print(href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 1163630)
+            sleep(2)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 998815)
         except (NoSuchElementException, NoSuchAttributeException) as e:
             print('Element error:', e)
         except Exception:
@@ -135,13 +151,12 @@ class Sc_gov:
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('div#NewsContent').get_attribute('innerHTML')
+            html = self.browser.find_element_by_css_selector('div#IDNewsDtail').get_attribute('innerHTML')
         except NoSuchElementException:
             try:
-                html = self.browser.find_element_by_css_selector('div.zwxl-article').get_attribute('innerHTML')
+                html = self.browser.find_element_by_css_selector('div#Zoom').get_attribute('innerHTML')
             except NoSuchElementException:
                 html = self.browser.page_source
-
 
         return html
 
@@ -208,9 +223,21 @@ class Sc_gov:
             timeArr = time.localtime(ts)
             date = time.strftime("%Y-%m-%d", timeArr)
             if current != date:
+
                 os.remove(fileName)
 
 
+    def getTime(self, dateTime):
+        t = dateTime.replace('[', '')
+        t = t.replace(']', '')
+
+        if '年' in dateTime or '月' in dateTime or '日' in dateTime:
+            t = t.replace('年', '-')
+            t = t.replace('月', '-')
+            t = t.replace('日', '')
+
+        return t
+
 if __name__ == '__main__':
-    sc = Sc_gov({})
+    sc = Qianxinan_gov({})
     sc.crawl()

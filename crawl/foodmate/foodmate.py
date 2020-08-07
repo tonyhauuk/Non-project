@@ -53,6 +53,7 @@ class Foodmate:
                 else:
                     try:
                         self.browser.find_element_by_name('下一页').click()
+                        self.i = 0
                     except NoSuchElementException:
                         break
 
@@ -106,7 +107,7 @@ class Foodmate:
 
 
 
-            # self.write_new_file(href, title, self.source, self.i, 855436)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 855436)
         except (NoSuchElementException, NoSuchAttributeException) as e:
             print('Element error:', e)
         except Exception:
