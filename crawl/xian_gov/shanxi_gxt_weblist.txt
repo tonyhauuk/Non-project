@@ -30,8 +30,5 @@ http://gxt.shaanxi.gov.cn/fgjj/index.jhtml
 http://gxt.shaanxi.gov.cn/rzfw/index.jhtml
 http://gxt.shaanxi.gov.cn/zxqyfw/index.jhtml
 http://gxt.shaanxi.gov.cn/yygl/index.jhtml
-
-
 http://gxt.shaanxi.gov.cn/xxgkml/index.jhtml
-
 http://gxt.shaanxi.gov.cn/qsygl/index.jhtml

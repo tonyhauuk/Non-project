@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-class Shanxi_gxt_gov:
+class Tushi:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -19,24 +19,27 @@ class Shanxi_gxt_gov:
         self.debug = True
 
     def crawl(self):
-        print('\n' ,'-' * 10, 'http://gxt.shaanxi.gov.cn/', '-' * 10)
+        print('\n' ,'-' * 10, 'http://www.tushi366.com/', '-' * 10, '\n')
 
         self.browser = webdriver.Firefox()
-        self.browser.set_window_position(x = 650, y = 0)
+        self.browser.set_window_position(x = 630, y = 0)
+
         self.total = 0
         i = 0
         status = True
-        file = './shanxi_gxt_weblist.txt'
+        file = './tushi_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
                 n = self.doCrawl(x)
+                break
                 if n == -1:
                     status = False
                     break
                 else:
                     i += n
 
+        print('quantity: ', self.total, '\n')
         if status:
             if i > 0:
                 self.deleteFiles()
@@ -54,35 +57,15 @@ class Shanxi_gxt_gov:
         except TimeoutException:
             return -1
 
-        sleep(5)
-
-        if 'xxgkml' in url:
-            newsCss = 'table#resultTable > tbody > tr'
-            dateCss = 'td:nth-child(4)'
-        elif 'qsygl' in url:
-            newsCss = 'div.tab-pane.active > ul > li'
-            dateCss = ''
-        else:
-            newsCss = 'div.pull-right.newsBox > ul > li'
-            dateCss = 'span'
-
         while True:
-            newsList = self.browser.find_elements_by_css_selector(newsCss)
-
+            newsList = self.browser.find_elements_by_css_selector('div.article-list > ul > li.item')
             for item in newsList:
-                try:
-                    if dateCss != '':
-                        dateTime = item.find_element_by_tag_name(dateCss).text
-                        dateTime = self.getTime(dateTime)
-                    else:
-                        day = item.find_element_by_css_selector('div.Institutional_block > span').text
-                        year = item.find_element_by_css_selector('div.Institutional_block > font').text
-                        dateTime = self.getTime(year) + '-' + day
-                except NoSuchElementException:
-                    continue
-
-                if dateTime in self.date:
-                    self.extract(item, url)
+                dateTime = item.find_element_by_tag_name('span').text
+                print('time:',dateTime)
+                self.extract(item)
+                continue
+                if dateTime.split(' ')[0] in self.date:
+                    self.extract(item)
                 else:
                     break
 
@@ -90,11 +73,13 @@ class Shanxi_gxt_gov:
             if self.i < len(newsList):  # 如果当前采集的数量小于当前页的条数，就不翻页了
                 break
             else:
-                self.i = 0
                 try:
                     self.browser.find_element_by_name('下一页').click()  # 点击下一页
+                    self.i = 0
                 except NoSuchElementException:
                     break
+
+
 
         if self.total > 0:
             # self.rename()
@@ -106,16 +91,8 @@ class Shanxi_gxt_gov:
 
 
     # 提取信息，一条的
-    def extract(self, item, url):
-        if 'xxgkml' in url:
-            titleInfo = item.find_element_by_css_selector('td:nth-child(2) > a')
-            title = titleInfo.get_attribute('title')
-        elif 'qsygl' in url:
-            titleInfo = item.find_element_by_tag_name('a')
-            title = titleInfo.text
-        else:
-            titleInfo = item.find_element_by_tag_name('a')
-            title = titleInfo.text
+    def extract(self, item):
+        titleInfo = item.find_element_by_tag_name('a')
 
         try:
             href = titleInfo.get_attribute('href')
@@ -129,6 +106,7 @@ class Shanxi_gxt_gov:
                 self.i += 1
                 self.total += 1
 
+            title = titleInfo.text
 
             handle = self.browser.current_window_handle  # 拿到当前页面的handle
             titleInfo.click()
@@ -144,29 +122,20 @@ class Shanxi_gxt_gov:
                     self.browser.close()                        # 关闭当前标签页
                     self.browser.switch_to.window(handle)       # 切换到之前的标签页
                     break
-
-            # self.write_new_file(href, title.replace('·', ''), self.source, self.i, self.date, 384751)
-        except (NoSuchElementException, NoSuchAttributeException) as e:
+            print(href, title)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 854301)
+        except Exception as e:
             print('Element error:', e)
-        except Exception:
-            return
 
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('div#content').get_attribute('innerHTML')
+            html = self.browser.find_element_by_css_selector('div.article-detail-inner').get_attribute('innerHTML')
         except NoSuchElementException:
             html = self.browser.page_source
 
+
         return html
-
-
-    def getTime(self, dateTime):
-        t = dateTime.replace('.', '-')
-        t = t.replace('【', '')
-        t = t.replace('】', '')
-
-        return t
 
 
     # 生成md5信息
@@ -194,7 +163,7 @@ class Shanxi_gxt_gov:
 
         # 更新txt文件
         try:
-            fileName = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/cq_md5.txt'
+            fileName = '/home/zran/src/crawler/31/manzhua/crawlpy3/record/sc_md5.txt'
             os.remove(fileName)
             with open(fileName, 'a+') as f:
                 f.write(str(self.d))
@@ -215,7 +184,7 @@ class Shanxi_gxt_gov:
 
 
     def deleteFiles(self):
-        filePath = '/root/estar_save/cq_gov/'
+        filePath = '/root/estar_save/sc_gov/'
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
         current = time.strftime("%Y-%m-%d", timeArray)
@@ -235,5 +204,5 @@ class Shanxi_gxt_gov:
 
 
 if __name__ == '__main__':
-    cq = Shanxi_gxt_gov({})
-    cq.crawl()
+    ts = Tushi({})
+    ts.crawl()
