@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-class Tushi:
+class Chuneng:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -19,15 +19,14 @@ class Tushi:
         self.debug = True
 
     def crawl(self):
-        print('\n' ,'-' * 10, 'http://www.tushi366.com/', '-' * 10, '\n')
+        print('\n' ,'-' * 10, 'http://chuneng.bjx.com.cn/', '-' * 10, '\n')
 
         self.browser = webdriver.Firefox()
         self.browser.set_window_position(x = 630, y = 0)
-
         self.total = 0
         i = 0
         status = True
-        file = './tushi_weblist.txt'
+        file = './chuneng_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
@@ -38,7 +37,6 @@ class Tushi:
                 else:
                     i += n
 
-        print('quantity: ', self.total, '\n')
         if status:
             if i > 0:
                 self.deleteFiles()
@@ -50,32 +48,45 @@ class Tushi:
 
 
     def doCrawl(self, url):
-        self.i = 0
+        self.i = i = 0
+        flag = False
         try:
             self.browser.get(url)
         except TimeoutException:
             return -1
 
-        while True:
-            newsList = self.browser.find_elements_by_css_selector('div.article-list > ul > li.item')
-            for item in newsList:
-                dateTime = item.find_element_by_tag_name('span').text
-                print('time:',dateTime)
+        topList = self.browser.find_elements_by_css_selector('div.list_main_left_nav > ul.list_main_left_content > li')
+        print('top len:', len(topList))
+        for item in topList:
+            dateTime = item.find_element_by_tag_name('span').text
+            print('date time:', dateTime)
 
-                if dateTime.split(' ')[0] in self.date:
-                    self.extract(item)
-                else:
-                    break
-
-
-            if self.i < len(newsList):  # 如果当前采集的数量小于当前页的条数，就不翻页了
-                break
+            if dateTime in self.date:
+                self.extract(item)
+                i += 1
             else:
-                try:
-                    self.browser.find_element_by_css_selector('div.align-c > div > a.next').click()  # 点击下一页
-                    self.i = 0
-                except NoSuchElementException:
+                break
+
+        if i == len(topList):
+            while True:
+                newsList = self.browser.find_elements_by_css_selector('div.list_content > ul > li:not(.cndashed_line)')
+                print('new len:', len(newsList))
+                for item in newsList:
+                    dateTime = item.find_element_by_tag_name('span').text
+
+                    if dateTime in self.date:
+                        self.extract(item)
+                    else:
+                        break
+
+                if self.i < len(newsList):  # 如果当前采集的数量小于当前页的条数，就不翻页了
                     break
+                else:
+                    try:
+                        self.browser.find_element_by_css_selector('div.page > a:last-child').click()  # 点击下一页
+                        self.i = 0
+                    except NoSuchElementException:
+                        break
 
 
 
@@ -120,17 +131,21 @@ class Tushi:
                     self.browser.close()                        # 关闭当前标签页
                     self.browser.switch_to.window(handle)       # 切换到之前的标签页
                     break
+
             print(href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 854301)
-        except Exception as e:
-            print('Element error:', e)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 1163537)
+        except Exception:
+            return
 
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('div.article-detail-inner').get_attribute('innerHTML')
+            html = self.browser.find_element_by_css_selector('div.newsrand').get_attribute('innerHTML')
         except NoSuchElementException:
-            html = self.browser.page_source
+            try:
+                html = self.browser.find_element_by_css_selector('div.hydetail_content').get_attribute('innerHTML')
+            except NoSuchElementException:
+                html = self.browser.page_source
 
 
         return html
@@ -202,5 +217,5 @@ class Tushi:
 
 
 if __name__ == '__main__':
-    ts = Tushi({})
-    ts.crawl()
+    c = Chuneng({})
+    c.crawl()

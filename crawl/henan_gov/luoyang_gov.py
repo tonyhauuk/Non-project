@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import time, hashlib, os
+import time, hashlib, os, datetime
 from time import sleep
 from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
 from selenium import webdriver
@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-class Tushi:
+class Luoyang_gov:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -18,8 +18,9 @@ class Tushi:
         self.dir = self._dir = ''
         self.debug = True
 
+
     def crawl(self):
-        print('\n' ,'-' * 10, 'http://www.tushi366.com/', '-' * 10, '\n')
+        print('\n' ,'-' * 10, 'http://www.ly.gov.cn/', '-' * 10, '\n')
 
         self.browser = webdriver.Firefox()
         self.browser.set_window_position(x = 630, y = 0)
@@ -27,7 +28,7 @@ class Tushi:
         self.total = 0
         i = 0
         status = True
-        file = './tushi_weblist.txt'
+        file = './luoyang_gov_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
@@ -38,7 +39,7 @@ class Tushi:
                 else:
                     i += n
 
-        print('quantity: ', self.total, '\n')
+        self.browser.quit()
         if status:
             if i > 0:
                 self.deleteFiles()
@@ -51,32 +52,55 @@ class Tushi:
 
     def doCrawl(self, url):
         self.i = 0
+        self.url = url
         try:
             self.browser.get(url)
         except TimeoutException:
             return -1
 
-        while True:
-            newsList = self.browser.find_elements_by_css_selector('div.article-list > ul > li.item')
-            for item in newsList:
-                dateTime = item.find_element_by_tag_name('span').text
-                print('time:',dateTime)
 
-                if dateTime.split(' ')[0] in self.date:
-                    self.extract(item)
+        if '2/4/9' in url: # 图片
+            while True:
+                newsList = self.browser.find_elements_by_css_selector('ul.list-inline.graphic_style > li')
+                for i in range(len(newsList)):
+                    item = self.browser.find_elements_by_css_selector('ul.list-inline.graphic_style > li')[i]
+                    if not self.extract(item):
+                        break
+
+                if self.i < len(newsList):
+                    break
                 else:
-                    break
-
-
-            if self.i < len(newsList):  # 如果当前采集的数量小于当前页的条数，就不翻页了
-                break
+                    try:
+                        self.browser.find_element_by_css_selector('ul#paging > li.next_page > a').click()
+                        self.i = 0
+                    except NoSuchElementException:
+                        break
+        else:
+            if '29/31' in url or '29/13' in url or '29/33' in url:
+                newsCss = 'ul.list-unstyled > li > table > tbody > tr'
             else:
-                try:
-                    self.browser.find_element_by_css_selector('div.align-c > div > a.next').click()  # 点击下一页
-                    self.i = 0
-                except NoSuchElementException:
-                    break
+                newsCss = 'ul.list-unstyled.headlines_today_list > li'
 
+            while True:
+                newsList = self.browser.find_elements_by_css_selector(newsCss)
+                for i in range(len(newsList))[1:]:
+                    item = self.browser.find_elements_by_css_selector(newsCss)[i]
+                    dateTime = item.find_element_by_tag_name('span').text
+
+                    if dateTime in self.date:
+                        if not self.extract(item):
+                            break
+                    else:
+                        break
+
+                if self.i < len(newsList):
+                    break
+                else:
+                    try:
+                        self.browser.find_element_by_css_selector('ul#paging > li.next_page > a').click()
+                        self.i = 0
+                    except NoSuchElementException:
+                        break
 
 
         if self.total > 0:
@@ -90,7 +114,10 @@ class Tushi:
 
     # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_tag_name('a')
+        if '2/4/9' in self.url:
+            titleInfo = item.find_element_by_css_selector('a')
+        else:
+            titleInfo = item.find_element_by_css_selector('p > a')
 
         try:
             href = titleInfo.get_attribute('href')
@@ -106,32 +133,38 @@ class Tushi:
 
             title = titleInfo.text
 
-            handle = self.browser.current_window_handle  # 拿到当前页面的handle
-            titleInfo.click()
+            if '2/4/9' in self.url:
+                titleInfo.find_element_by_tag_name('span').click()
+            else:
+                titleInfo.click()
 
-            # switch tab window
-            WebDriverWait(self.browser, 10).until(EC.number_of_windows_to_be(2))
-            handles = self.browser.window_handles
-            for newHandle in handles:
-                if newHandle != handle:
-                    self.browser.switch_to.window(newHandle)    # 切换到新标签
-                    sleep(2)                                    # 等个几秒钟
-                    self.source = self.getPageText()            # 拿到网页源码
-                    self.browser.close()                        # 关闭当前标签页
-                    self.browser.switch_to.window(handle)       # 切换到之前的标签页
-                    break
+            self.source = self.getPageText()  # 拿到网页源码
+            sleep(1)
+            self.browser.back()
+
+
             print(href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 854301)
+
+            if self.source != 'none':
+                # self.write_new_file(href, title, self.source, self.i, self.date, 820176)
+                return True
+            else:
+                return False
         except Exception as e:
-            print('Element error:', e)
+            return False
 
 
     def getPageText(self):  # 获取网页正文
-        try:
-            html = self.browser.find_element_by_css_selector('div.article-detail-inner').get_attribute('innerHTML')
-        except NoSuchElementException:
-            html = self.browser.page_source
+        pageTime = self.browser.find_element_by_css_selector('ul.list-inline > li.date').text
+        dateTime = pageTime.split('：')[1].replace('来源', '')
 
+        if dateTime in self.date:
+            try:
+                html = self.browser.find_element_by_css_selector('li.wzxqnr').get_attribute('innerHTML')
+            except NoSuchElementException:
+                html = self.browser.page_source
+        else:
+            html = 'none'
 
         return html
 
@@ -202,5 +235,5 @@ class Tushi:
 
 
 if __name__ == '__main__':
-    ts = Tushi({})
-    ts.crawl()
+    ly = Luoyang_gov({})
+    ly.crawl()

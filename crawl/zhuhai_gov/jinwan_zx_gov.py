@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import time, hashlib, os
+import time, hashlib, os, datetime
 from time import sleep
 from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
 from selenium import webdriver
@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-class Tushi:
+class Jwrd_zx_gov:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -18,8 +18,10 @@ class Tushi:
         self.dir = self._dir = ''
         self.debug = True
 
+
+
     def crawl(self):
-        print('\n' ,'-' * 10, 'http://www.tushi366.com/', '-' * 10, '\n')
+        print('\n' ,'-' * 10, 'http://zx.jinwan.gov.cn/', '-' * 10, '\n')
 
         self.browser = webdriver.Firefox()
         self.browser.set_window_position(x = 630, y = 0)
@@ -27,18 +29,18 @@ class Tushi:
         self.total = 0
         i = 0
         status = True
-        file = './tushi_weblist.txt'
+        file = './jinwan_zx_gov_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
                 n = self.doCrawl(x)
+                break
                 if n == -1:
                     status = False
                     break
                 else:
                     i += n
 
-        print('quantity: ', self.total, '\n')
         if status:
             if i > 0:
                 self.deleteFiles()
@@ -53,31 +55,20 @@ class Tushi:
         self.i = 0
         try:
             self.browser.get(url)
+            sleep(3)
         except TimeoutException:
             return -1
 
-        while True:
-            newsList = self.browser.find_elements_by_css_selector('div.article-list > ul > li.item')
-            for item in newsList:
-                dateTime = item.find_element_by_tag_name('span').text
-                print('time:',dateTime)
-
-                if dateTime.split(' ')[0] in self.date:
-                    self.extract(item)
-                else:
-                    break
-
-
-            if self.i < len(newsList):  # 如果当前采集的数量小于当前页的条数，就不翻页了
-                break
+        newsList = self.browser.find_elements_by_css_selector('div.right-cont > ul#NewsList > li')
+        for item in newsList:
+            dateTime = item.find_element_by_tag_name('span').text
+            print('time:', dateTime)
+            self.extract(item)
+            continue
+            if dateTime in self.date:
+                self.extract(item)
             else:
-                try:
-                    self.browser.find_element_by_css_selector('div.align-c > div > a.next').click()  # 点击下一页
-                    self.i = 0
-                except NoSuchElementException:
-                    break
-
-
+                break
 
         if self.total > 0:
             # self.rename()
@@ -105,7 +96,6 @@ class Tushi:
                 self.total += 1
 
             title = titleInfo.text
-
             handle = self.browser.current_window_handle  # 拿到当前页面的handle
             titleInfo.click()
 
@@ -121,17 +111,16 @@ class Tushi:
                     self.browser.switch_to.window(handle)       # 切换到之前的标签页
                     break
             print(href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 854301)
-        except Exception as e:
-            print('Element error:', e)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 1171123)
+        except Exception:
+            return
 
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('div.article-detail-inner').get_attribute('innerHTML')
+            html = self.browser.find_element_by_css_selector('div.conts').get_attribute('innerHTML')
         except NoSuchElementException:
             html = self.browser.page_source
-
 
         return html
 
@@ -202,5 +191,5 @@ class Tushi:
 
 
 if __name__ == '__main__':
-    ts = Tushi({})
-    ts.crawl()
+    jw = Jwrd_zx_gov({})
+    jw.crawl()
