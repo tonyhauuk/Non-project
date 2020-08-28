@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-class Jwrd_zx_gov:
+class Qingshan_zw_gov:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -19,9 +19,8 @@ class Jwrd_zx_gov:
         self.debug = True
 
 
-
     def crawl(self):
-        print('\n' ,'-' * 10, 'http://zx.jinwan.gov.cn/', '-' * 10, '\n')
+        print('\n', '-' * 10, 'http://www.ncqsh.gov.cn/id_sylm202004301721489392/column.shtml', '-' * 10, '\n')
 
         self.browser = webdriver.Firefox()
         self.browser.set_window_position(x = 630, y = 0)
@@ -29,7 +28,7 @@ class Jwrd_zx_gov:
         self.total = 0
         i = 0
         status = True
-        file = './jinwan_zx_gov_weblist.txt'
+        file = './qsh_zw_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
@@ -58,7 +57,7 @@ class Jwrd_zx_gov:
         except TimeoutException:
             return -1
 
-        newsList = self.browser.find_elements_by_css_selector('div.right-cont > ul#NewsList > li')
+        newsList = self.browser.find_elements_by_css_selector('div.zwgkColumnRight > ul.zwgkColumnList-Con > li')
         for item in newsList:
             dateTime = item.find_element_by_tag_name('span').text
 
@@ -108,14 +107,14 @@ class Jwrd_zx_gov:
                     self.browser.switch_to.window(handle)       # 切换到之前的标签页
                     break
             print(href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 1171123)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 1166315)
         except Exception:
             return
 
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('div.conts').get_attribute('innerHTML')
+            html = self.browser.find_element_by_css_selector('div.WnewCont').get_attribute('innerHTML')
         except NoSuchElementException:
             html = self.browser.page_source
 
@@ -188,5 +187,5 @@ class Jwrd_zx_gov:
 
 
 if __name__ == '__main__':
-    jw = Jwrd_zx_gov({})
-    jw.crawl()
+    qs = Qingshan_zw_gov({})
+    qs.crawl()
