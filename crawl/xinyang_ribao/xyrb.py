@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-class Jlwb:
+class Xyrb:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -21,30 +21,37 @@ class Jlwb:
 
     def crawl(self):
         self.browser = webdriver.Firefox()
-        self.browser.set_window_position(x = 600, y = 0)
+        self.browser.set_window_position(x = 630, y = 0)
         self.i = 0
 
         try:
-            self.browser.get('http://jlwb.njnews.cn')
+            self.browser.get('http://ribao.xyxww.com.cn')
         except TimeoutException:
             return 'interrupt', 'none', 'error'
 
         sleep(5)
-        self.browser.find_elements_by_css_selector('div.head > div.menu > a')[1].click()
 
-        newsList = self.browser.find_elements_by_css_selector('div.list > a')
-        for i in range(len(newsList)):
-            info = self.browser.find_elements_by_css_selector('div.list > a')[i]
-            href = info.get_attribute('href')
+        channelList = self.browser.find_elements_by_css_selector('div.channel-list > ul > li')
+        for i in range(len(channelList)):
+            channelItem = self.browser.find_elements_by_css_selector('div.channel-list > ul > li')[i]
+            if i > 0:
+                channelItem.click()
+                sleep(2)
 
-            md5 = self.makeMD5(href)
-            # dict filter
-            if md5 in self.d:
-                return
-            else:
-                self.d[md5] = self.date.split(' ')[0]  # 往dict里插入记录
-                self.i += 1
-                self.extract(info)
+            newsList = self.browser.find_elements_by_css_selector('div.newslist-item.current > ul > li')
+            for j in range(len(newsList)):
+                item = self.browser.find_elements_by_css_selector('div.newslist-item.current > ul > li')[j]
+                titleInfo = item.find_element_by_tag_name('a')
+                href = titleInfo.get_attribute('href')
+
+                md5 = self.makeMD5(href)
+                # dict filter
+                if md5 in self.d:
+                    return
+                else:
+                    self.d[md5] = self.date.split(' ')[0]  # 往dict里插入记录
+                    self.i += 1
+                    self.extract(titleInfo, href)
 
 
         if self.i > 0:
@@ -57,7 +64,7 @@ class Jlwb:
 
 
     # 提取信息，一条的
-    def extract(self, info):
+    def extract(self, info, href):
         try:
             title = info.text
             self.browser.set_page_load_timeout(2)
@@ -70,23 +77,17 @@ class Jlwb:
             if self.debug:
                 print('count:', self.i, ' --- ', title)
 
-            try:
-                img = self.browser.find_element_by_css_selector('div.coin-slider').get_attribute('innerHTML')
-            except:
-                img = self.browser.find_element_by_css_selector('div#coin-slider').get_attribute('innerHTML')
 
-            cnt = self.browser.find_element_by_css_selector('div.content').text
-            self.source = img + cnt
-            href = self.browser.current_url
+            self.source = self.browser.find_element_by_css_selector('div.article-content').text
 
-            # self.write_new_file(href, title, self.source, self.i, self.date, 414705)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 416222)
             self.browser.back()
             sleep(2)
-        except (NoSuchElementException, NoSuchAttributeException) as e:
-            print('Element error:', e)
-
-        except Exception:
+        except Exception as e:
+            print(e)
             return
+
+
 
 
     # 生成md5信息
@@ -153,5 +154,5 @@ class Jlwb:
 
 
 if __name__ == '__main__':
-    j = Jlwb({})
-    j.crawl()
+    x = Xyrb({})
+    x.crawl()
