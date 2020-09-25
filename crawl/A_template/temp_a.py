@@ -59,18 +59,18 @@ class Xijiang:
         while True:
             newsList = self.browser.find_elements_by_css_selector('div > ul > li')
             for item in newsList:
-                dateTime = item.find_element_by_css_selector('li.date').text    # 一半多是span或者li.date
+                dateTime = item.find_element_by_css_selector('li.date').text
 
                 if dateTime in self.date:
                     self.extract(item)
                 else:
                     break
 
-            if self.i < len(newsList):  # 如果当前采集的数量小于当前页的条数，就不翻页了
+            if self.i < len(newsList):
                 break
             else:
                 try:
-                    self.browser.find_element_by_partial_link_text('下一页').click()  # 点击下一页
+                    self.browser.find_element_by_partial_link_text('下一页').click()
                     self.i = 0
                 except NoSuchElementException:
                     break
@@ -86,7 +86,7 @@ class Xijiang:
             return 0
 
 
-    # 提取信息，一条的
+    # Extract one item
     def extract(self, item):
         titleInfo = item.find_element_by_css_selector('a')
 
@@ -98,13 +98,13 @@ class Xijiang:
             if md5 in self.d:
                 return
             else:
-                self.d[md5] = self.date.split(' ')[0]  # 往dict里插入记录
+                self.d[md5] = self.date.split(' ')[0]  # Insert md5 value into the dict
                 self.i += 1
                 self.total += 1
 
             title = titleInfo.text
 
-            handle = self.browser.current_window_handle  # 拿到当前页面的handle
+            handle = self.browser.current_window_handle  # Obtain current page handle
             titleInfo.click()
 
             # switch tab window
@@ -112,11 +112,11 @@ class Xijiang:
             handles = self.browser.window_handles
             for newHandle in handles:
                 if newHandle != handle:
-                    self.browser.switch_to.window(newHandle)    # 切换到新标签
-                    sleep(2)                                    # 等个几秒钟
-                    self.source = self.getPageText()            # 拿到网页源码
-                    self.browser.close()                        # 关闭当前标签页
-                    self.browser.switch_to.window(handle)       # 切换到之前的标签页
+                    self.browser.switch_to.window(newHandle)    # Switch new tab
+                    sleep(2)                                    # Wait 2 seconds
+                    self.source = self.getPageText()            # Download page source
+                    self.browser.close()                        # Close current new tab
+                    self.browser.switch_to.window(handle)       # Switch to before tab
                     break
 
             self.write_new_file(href, title, self.source, self.i, self.date, 0000000)
@@ -124,17 +124,14 @@ class Xijiang:
             print('Element error:', e)
 
 
-    def getPageText(self):  # 获取网页正文
+    def getPageText(self):
         try:
             html = self.browser.find_element_by_css_selector('div.article-content').get_attribute('innerHTML')
         except NoSuchElementException:
             html = self.browser.page_source
 
-
         return html
 
-
-# 写一个新文章
     def write_new_file(self, url, title, source, i, time, id):
         content = '''
                 <html>
@@ -162,11 +159,11 @@ class Xijiang:
         filename = self._dir + 'iask_' + str(i) + '_' + str(len(self.d)) + '.htm-2'
         for num in range(2):
             if 1 == crawlerfun.write_file(filename, page_text, ifdisplay = 0):
-                savePath = '/root/estar_save/' + self.projectName + '/'
+                savePath = '/root/xxxxxxxxxx/' + self.projectName + '/'
                 if not os.path.exists(savePath):
                     os.makedirs(savePath)
                 fileName = savePath + 'iask_' + str(i) + '_' + str(len(self.d)) + '.htm-2'
-                crawlerfun.write_file(fileName, page_text, ifdisplay = 0)  # 再次保存到/root/estar_save目录下
+                crawlerfun.write_file(fileName, page_text, ifdisplay = 0)
 
                 break
             else:  # 有时目录会被c程序删掉

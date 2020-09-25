@@ -20,14 +20,14 @@ def delete_particular_file(top, prefix, suffix):
             if file_name.split('.')[index] == match:
                 delete_file_name = os.path.join(root, file_name)
                 os.remove(delete_file_name)
-                print(f'{delete_file_name} done...')
+                print(f'{delete_file_name}  ---> done...')
         # for name in dirs:
         #     os.rmdir(os.path.join(root, name))
 
 
 if __name__ == '__main__':
     top = r'D:\PyProject\Non-project'
-    prefix = 'geckodriver'
+    prefix = 'geckodriver'   # geckodriver
     suffix = ''
 
     delete_particular_file(top, prefix, suffix)

@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-class Kan_sina:
+class Ifeng_finance:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -26,7 +26,7 @@ class Kan_sina:
         self.browser.set_window_position(x = 700, y = 0)
         n = 0
 
-        webLst = ['http://k.sina.com.cn/mediaDocList.d.html?uid=6500092670']
+        webLst = ['http://finance.ifeng.com/shanklist/1-35220-/']
         for url in webLst:
             try:
                 self.browser.get(url)
@@ -34,13 +34,12 @@ class Kan_sina:
                 n = -1
                 break
 
-            self.browser.find_element_by_xpath('/html/body').send_keys(Keys.END)
 
-            newsList = self.browser.find_elements_by_css_selector('div.person-list > div.person-l-item')
+            newsList = self.browser.find_elements_by_css_selector('div.content-14uJp0dk > div > ul > li')
             for item in newsList:
-                dateTime = item.find_element_by_css_selector('p.column-la-time').text
+                dateTime = item.find_element_by_tag_name('time').text
 
-                if dateTime.split(' ')[0] in self.date:
+                if '今天' in dateTime:
                     self.extract(item)
                 else:
                     break
@@ -61,7 +60,7 @@ class Kan_sina:
 
     # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_css_selector('h2 > a')
+        titleInfo = item.find_element_by_css_selector('div > h2 > a')
         try:
             href = titleInfo.get_attribute('href')
             md5 = self.makeMD5(href)
@@ -91,7 +90,7 @@ class Kan_sina:
                     break
 
             print(href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 1171052)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 1171200)
         except (NoSuchElementException, NoSuchAttributeException) as e:
             print('Element error:', e)
         except Exception:
@@ -100,7 +99,7 @@ class Kan_sina:
 
     def getPageText(self):  # 获取网页正文
         try:
-            pageHTML = self.browser.find_element_by_css_selector('div.article').get_attribute('innerHTML')
+            pageHTML = self.browser.find_element_by_css_selector('div.text-3w2e3DBc').get_attribute('innerHTML')
         except NoSuchElementException:
             pageHTML = self.browser.page_source
 
@@ -172,5 +171,5 @@ class Kan_sina:
 
 
 if __name__ == '__main__':
-    sina = Kan_sina({})
-    sina.crawl()
+    ifeng = Ifeng_finance({})
+    ifeng.crawl()

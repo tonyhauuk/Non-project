@@ -7,50 +7,63 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+#import crawlerfun
 
-
-class Kan_sina:
+class Nzdb:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
         self.date = time.strftime('%Y-%m-%d %H:%M:%S', timeArray)
+        self.projectName = 'food'
         self.d = d
-        self.dir = self._dir = ''
+        self.dir = self._dir = self.source = ''
         # self.ipnum = crawlerfun.ip2num('61.130.181.229')
         self.debug = True
 
 
     def crawl(self):
-        self.i = 0
+        print('\n', '-' * 10, 'http://www.nzdb.com.cn/', '-' * 10, '\n')
+        self.i = self.total = 0
         self.browser = webdriver.Firefox()
-        self.browser.set_window_position(x = 700, y = 0)
+        self.browser.set_window_position(x = 680, y = 0)
         n = 0
 
-        webLst = ['http://k.sina.com.cn/mediaDocList.d.html?uid=6500092670']
-        for url in webLst:
+        keywords = ['hy', 'cj', 'gj', 'qy', 'nj', 'rw', 'zt', 'dt']
+
+        for keyword in keywords:
+            self.keyword = keyword
             try:
+                url = 'http://www.nzdb.com.cn/' + keyword + '/index.jhtml'
                 self.browser.get(url)
             except TimeoutException:
                 n = -1
                 break
 
-            self.browser.find_element_by_xpath('/html/body').send_keys(Keys.END)
+            while True:
+                newsList = self.browser.find_elements_by_css_selector('div.contents_list > ul > li')
+                for item in newsList:
+                    dateTime = item.find_element_by_tag_name('span').text
+                    if self.getTime(dateTime) in self.date:
+                        self.extract(item)
+                    else:
+                        break
 
-            newsList = self.browser.find_elements_by_css_selector('div.person-list > div.person-l-item')
-            for item in newsList:
-                dateTime = item.find_element_by_css_selector('p.column-la-time').text
-
-                if dateTime.split(' ')[0] in self.date:
-                    self.extract(item)
-                else:
+                if self.i < len(newsList):
                     break
+                else:
+                    try:
+                        self.browser.find_element_by_partial_link_text('下一页').click()
+                        self.i = 0
+                    except NoSuchElementException:
+                        break
 
-        print('quantity:', self.i)
+
+        print('quantity:', self.total)
         if n == 0:
-            if self.i > 0:
-                self.rename()
-                self.expire()
-                self.deleteFiles()
+            if self.total > 0:
+                # self.rename()
+                # self.expire()
+                # self.deleteFiles()
 
                 return 'complete', self.source, 'ok'
             else:
@@ -61,8 +74,8 @@ class Kan_sina:
 
     # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_css_selector('h2 > a')
         try:
+            titleInfo = item.find_element_by_tag_name('a')
             href = titleInfo.get_attribute('href')
             md5 = self.makeMD5(href)
 
@@ -72,39 +85,45 @@ class Kan_sina:
             else:
                 self.d[md5] = self.date.split(' ')[0]  # 往dict里插入记录
                 self.i += 1
+                self.total += 1
+
 
             title = titleInfo.text
 
             handle = self.browser.current_window_handle  # 拿到当前页面的handle
-            titleInfo.click()
+            titleInfo.find_element_by_tag_name('h2').click()
 
             # switch tab window
             WebDriverWait(self.browser, 10).until(EC.number_of_windows_to_be(2))
             handles = self.browser.window_handles
             for newHandle in handles:
                 if newHandle != handle:
-                    self.browser.switch_to.window(newHandle)    # 切换到新标签
-                    self.source = self.getPageText()            # 拿到网页源码
-                    self.browser.close()                        # 关闭当前标签页
-                    sleep(2)                                    # 等个几秒钟
-                    self.browser.switch_to.window(handle)       # 切换到之前的标签页
+                    self.browser.switch_to.window(newHandle)        # 切换到新标签
+                    sleep(1)                                        # 等个几秒钟
+                    self.source = self.getPageText()                # 拿到网页源码
+                    sleep(2)                                        # 等个几秒钟
+                    self.browser.close()                            # 关闭当前标签页
+                    self.browser.switch_to.window(handle)           # 切换到之前的标签页
                     break
-
             print(href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 1171052)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 98140)
         except (NoSuchElementException, NoSuchAttributeException) as e:
             print('Element error:', e)
         except Exception:
-            pass
+            return
 
 
     def getPageText(self):  # 获取网页正文
+        html = ''
         try:
-            pageHTML = self.browser.find_element_by_css_selector('div.article').get_attribute('innerHTML')
-        except NoSuchElementException:
-            pageHTML = self.browser.page_source
+            sources = self.browser.find_elements_by_css_selector('div.content > p')
+            for p in sources:
+                html += p.get_attribute('innerHTML')
 
-        return pageHTML
+        except:
+            html = self.browser.page_source
+
+        return html
 
 
     # 生成md5信息
@@ -171,6 +190,29 @@ class Kan_sina:
                 os.remove(fileName)
 
 
+    # 过滤时间的字符串
+    def getTime(self, dateTime):
+        t = dateTime.replace('[', '')
+        t = t.replace(']', '')
+
+        if '年' in dateTime or '月' in dateTime or '日' in dateTime:
+            t = t.replace('年', '-')
+            t = t.replace('月', '-')
+            t = t.replace('日', '')
+
+        if '发布时间：' in dateTime:
+            t = t.replace('发布时间：', '')
+
+        if '.' in dateTime:
+            t = t.replace('.', '-')
+
+        if '(' in dateTime or ')' in dateTime:
+            t = t.replace('(', '')
+            t = t.replace(')', '')
+
+        return t
+
+
 if __name__ == '__main__':
-    sina = Kan_sina({})
-    sina.crawl()
+    n = Nzdb({})
+    n.crawl()

@@ -153,3 +153,13 @@ def get_timestamp(ifmillisecond = 0):
         return tm_s, tm_millisecond
     else:
         return tm_s
+
+
+
+def mkdir(dir):
+	try:
+		os.mkdir(dir)
+	except:
+		return 0
+	else:
+		return 1
