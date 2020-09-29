@@ -21,9 +21,9 @@ class KuaiShou:
 
     def swipeUp(self):
         l = self.getSize()
-        x1 = int(l[0] * 0.5)  # x坐标
-        y1 = int(l[1] * 0.75)  # 起始y坐标
-        y2 = int(l[1] * 0.25)  # 终点y坐标
+        x1 = int(l[0] * 0.5)    # x坐标
+        y1 = int(l[1] * 0.75)   # 起始y坐标
+        y2 = int(l[1] * 0.25)   # 终点y坐标
         i = 0
         if i == 0:
             sleep(60)
