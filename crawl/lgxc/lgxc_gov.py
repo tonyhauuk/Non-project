@@ -173,7 +173,7 @@ class Lgxc_gov:
 
     def getPageTextWX(self):  # 获取微信网页正文
         try:
-            html = self.browser.find_element_by_css_selector('div.rich_media_content ').get_attribute('innerHTML')
+            html = self.browser.find_element_by_css_selector('div.rich_media_content').get_attribute('innerHTML')
         except NoSuchElementException:
             html = self.browser.page_source
 

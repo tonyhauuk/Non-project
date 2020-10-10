@@ -35,7 +35,6 @@ class Haonong:
             url = f.readlines()
             for x in url:
                 n = self.doCrawl(x)
-                break
                 if n == -1:
                     status = False
                     break

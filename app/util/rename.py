@@ -1,7 +1,7 @@
 import os, re
 
 index = 0
-path = 'E:/Download/914/'
+path = 'E:/Download/109/'
 prefix = []
 fileList = os.listdir(path)
 for i in range(len(fileList)):
@@ -11,3 +11,5 @@ for i in range(len(fileList)):
     newName = path + new
     os.rename(oldName, newName)
     print("文件%s重命名成功, 新的文件名为%s" % (oldName, newName))
+
+
