@@ -4,9 +4,9 @@ import requests
 
 CHS = 'chi_sim'
 
-imagePath = Image.open('')
-code = pytesseract.image_to_string(imagePath, CHS)
-print(code)
+imagePath = Image.open('D:\ocr.jpg')
+code = pytesseract.image_to_string(imagePath)
+print('string: ',code)
 
 
 def imageGrayscaleDeal(image):

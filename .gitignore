@@ -2,4 +2,4 @@ test.py
 .idea/
 *.log
 *.html
-util
+util/*
