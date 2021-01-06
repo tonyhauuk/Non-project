@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import time, hashlib, os
+import time, datetime, re, hashlib, os, sys
 from time import sleep
 from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
 from selenium import webdriver
@@ -9,37 +9,58 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-class Tongchuan_gov:
+class HaozeSina:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
         self.date = time.strftime('%Y-%m-%d %H:%M:%S', timeArray)
         self.d = d
         self.dir = self._dir = ''
+        # self.ipnum = crawlerfun.ip2num('61.130.181.229')
         self.debug = True
 
-    def crawl(self):
-        print('\n' ,'-' * 10, 'http://www.tongchuan.gov.cn/', '-' * 10)
 
+
+    def crawl(self):
+        self.i = 0
         self.browser = webdriver.Firefox()
         self.browser.set_window_position(x = 630, y = 0)
-        self.total = 0
-        i = 0
-        status = True
-        file = 'tongchuan_gov_weblist.txt'
-        with open(file, mode = 'r') as f:
-            url = f.readlines()
-            for x in url:
-                n = self.doCrawl(x)
-                if n == -1:
-                    status = False
+        n = 0
+
+        webLst = ['https://t.cj.sina.com.cn/k/article/author_article/2150437517']
+        for url in webLst:
+            try:
+                self.browser.get(url)
+            except TimeoutException:
+                n = -1
+                break
+
+            while True:
+                newsList = self.browser.find_elements_by_css_selector('div#xb-article > div.article-item.clearfix')
+                for item in newsList:
+                    dateTime = item.find_element_by_css_selector('div.article-footer > span:nth-child(2)').text
+
+                    if self.getTime(dateTime.split(' ')[0]) in self.date:
+                        self.extract(item)
+                    else:
+                        break
+
+                if self.i < len(newsList):
                     break
                 else:
-                    i += n
+                    try:
+                        self.i = 0
+                        self.browser.find_element_by_css_selector('div#pages-demo > span.pages-w > span.pages-rt').click()
+                    except NoSuchElementException:
+                        break
 
-        if status:
-            if i > 0:
-                self.deleteFiles()
+        print('quantity:', self.i)
+        if n == 0:
+            if self.i > 0:
+                # self.rename()
+                # self.expire()
+                # self.deleteFiles()
+
                 return 'complete', self.source, 'ok'
             else:
                 return 'complete', 'none', 'ok'
@@ -47,74 +68,9 @@ class Tongchuan_gov:
             return 'interrupt', 'none', 'error'
 
 
-    def doCrawl(self, url):
-        self.i = 0
-        try:
-            self.browser.get(url)
-        except TimeoutException:
-            return -1
-
-
-        if 'news' in url or 'zxzx' in url:
-            self.p = 1
-            if 'tpxw' in url:
-                newsCss = 'div.video-list > ul.clearfix > li'
-                dateCss = 'em'
-            else:
-                newsCss = 'div.list > ul > li'
-                dateCss = 'span'
-        else:
-            self.p = 2
-            if 'zcwj' in url:
-                newsCss = 'div.list1 > ul > li'
-                dateCss = 'span'
-            else:
-                newsCss = 'div.xinlr_nr > table > tbody > tr'
-                dateCss = 'td.xinlr_twh'
-
-
-        while True:
-            i = 0
-            newsList = self.browser.find_elements_by_css_selector(newsCss)
-            for item in newsList:
-                try:
-                    dateTime = item.find_element_by_css_selector(dateCss).text
-                    i += 1
-                except NoSuchElementException:
-                    continue
-
-                if self.getTime(dateTime) in self.date:
-                    self.extract(item)
-                else:
-                    break
-
-            if self.p == 2:
-                i = len(newsList) - 1
-            else:
-                i = len(newsList)
-
-            if self.i < i or i == 0:  # 如果当前采集的数量小于当前页的条数，就不翻页了
-                break
-            else:
-                try:
-                    self.browser.find_element_by_css_selector('span > a.next').click()  # 点击下一页
-                    self.i = 0
-                except NoSuchElementException:
-                    break
-
-        if self.total > 0:
-            # self.rename()
-            # self.expire()
-
-            return self.total
-        else:
-            return 0
-
-
     # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_tag_name('a')
-
+        titleInfo = item.find_element_by_css_selector('div.m-news-con-right > a.title')
         try:
             href = titleInfo.get_attribute('href')
             md5 = self.makeMD5(href)
@@ -125,15 +81,11 @@ class Tongchuan_gov:
             else:
                 self.d[md5] = self.date.split(' ')[0]  # 往dict里插入记录
                 self.i += 1
-                self.total += 1
 
             title = titleInfo.text
 
             handle = self.browser.current_window_handle  # 拿到当前页面的handle
-            if self.p == 1:
-                titleInfo.click()
-            elif self.p == 2:
-                titleInfo.find_element_by_tag_name('b').click()
+            titleInfo.click()
 
             # switch tab window
             WebDriverWait(self.browser, 10).until(EC.number_of_windows_to_be(2))
@@ -148,20 +100,20 @@ class Tongchuan_gov:
                     break
 
             print(href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 833111)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 1169167)
         except (NoSuchElementException, NoSuchAttributeException) as e:
             print('Element error:', e)
         except Exception:
-            return
+            pass
 
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('div#zoom').get_attribute('innerHTML')
+            pageHTML = self.browser.find_element_by_css_selector('div#artibody').get_attribute('innerHTML')
         except NoSuchElementException:
-            html = self.browser.page_source
+            pageHTML = self.browser.page_source
 
-        return html
+        return pageHTML
 
 
     # 生成md5信息
@@ -189,7 +141,7 @@ class Tongchuan_gov:
 
         # 更新txt文件
         try:
-            fileName = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/cq_md5.txt'
+            fileName = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/cnstock_md5.txt'
             os.remove(fileName)
             with open(fileName, 'a+') as f:
                 f.write(str(self.d))
@@ -208,9 +160,8 @@ class Tongchuan_gov:
         except:
             pass
 
-
     def deleteFiles(self):
-        filePath = '/root/estar_save/cq_gov/'
+        filePath = '/root/estar_save/cnstock/'
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
         current = time.strftime("%Y-%m-%d", timeArray)
@@ -241,8 +192,11 @@ class Tongchuan_gov:
         if '发布时间：' in dateTime:
             t = t.replace('发布时间：', '')
 
+        if '.' in dateTime:
+            t = t.replace('.', '-')
+
         return t
 
 if __name__ == '__main__':
-    cq = Tongchuan_gov({})
-    cq.crawl()
+    sina = HaozeSina({})
+    sina.crawl()

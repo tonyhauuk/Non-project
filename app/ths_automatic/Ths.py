@@ -4,6 +4,9 @@ from time import sleep
 import easytrader
 import easytrader.exceptions
 from pywinauto.application import Application
+from easytrader import refresh_strategies
+from easytrader import grid_strategies
+
 
 
 class Ths:
@@ -17,6 +20,7 @@ class Ths:
         self.user.enable_type_keys_for_editor()
         self.user.connect(self.appName)
         # self.app = Application().start(self.appName)
+        # self.user.grid_strategy = grid_strategies.Xls
 
 
     def buy(self, id, price, count):
@@ -79,22 +83,33 @@ class Ths:
 
 if __name__ == '__main__':
     id = 600028
-    buyPrice = 3.87
+    buyPrice = 4.07
     amount = 100
-    sellPrice = 3.80
+    sellPrice = 4.06
 
     ths = Ths()
     ths.startApp()
 
-    # for i in range(10):
-    #     # ths.buy(id, buyPrice, amount)
-    #     ths.sell(id, sellPrice, amount)
-    #     print('-'*10,i,'-'*10,'\n')
+    for i in range(50):
+        ths.buy(id, buyPrice, amount)
+        # ths.sell(id, sellPrice, amount)
+        print('-'*10,i+1,'-'*10,'\n')
+
+    exit()
+    for i in range(5):
+        refresh_strategies.Toolbar(refresh_btn_index = 4)
+        if len(ths.getTodayTrades()) == 0:
+            # ths.refresh()
+            # ths.user.refresh_strategy = refresh_strategies.Toolbar(refresh_btn_index = 4)
+            sleep(.5)
+        else:
+            print(ths.getTodayEntrusts())
+            break
 
 
-
-    print(ths.getBalance())
-    print('-'*10)
-    print(ths.getPosition())
-    # print(ths.getTodayEntrusts())
+    # print(ths.getBalance())
+    # print('-'*10)
+    # print(ths.getPosition())
     # print(ths.getTodayTrades())
+
+    # sell id : self._config.CANCEL_ENTRUST_ENTRUST_FIELD
