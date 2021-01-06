@@ -34,8 +34,10 @@ class WeixinApi:
             self.response = f.read()
             f.close()
 
+        # with open('newrand.json', 'w+', encoding = 'utf-8') as f:
             # f.write(self.response)
             # f.write('\n')
+
         # return response.text
         # print(self.response)
 
@@ -95,8 +97,8 @@ class WeixinApi:
         # })
 
         self.browser.set_window_position(x = 630, y = 0)
-        element = self.browser.find_element_by_tag_name('body')
-        element.send_keys(Keys.CONTROL + 't')
+        # element = self.browser.find_element_by_tag_name('body')
+        # element.send_keys(Keys.CONTROL + 't')
 
         for link in url:
             try:
@@ -163,7 +165,7 @@ class WeixinApi:
         # cv2.imwrite('D:\PyProject\/Non-project\crawl\weixin_project\/new_1609228332.png', dilate)
 
         img = Image.open('D:\PyProject\/Non-project\crawl\weixin_project\/new_1609228332.png')
-        img = img.convert('L')  # 这里也可以尝试使用L
+        img = img.convert('RGB')  # L
         # img.show()
         enhancer = ImageEnhance.Color(img)
         enhancer = enhancer.enhance(0)
@@ -206,7 +208,7 @@ if __name__ == '__main__':
     keyword = '茅台'
 
     wx = WeixinApi()
-    wx.removeHTML()
+    # wx.removeHTML()
     wx.doGet(keyword)
     r = wx.obtain()
 
