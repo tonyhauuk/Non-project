@@ -27,16 +27,16 @@ class WeixinApi:
             'size': 5,
         }
 
-        response = requests.post(url = self.url, data = data, headers = key)
-        self.response = response.text
-        #
-        # with open('newrand.json', 'r', encoding = 'utf-8') as f:
-        #     self.response = f.read()
-        #     f.close()
+        # response = requests.post(url = self.url, data = data, headers = key)
+        # self.response = response.text
 
-        with open('newrand.json', 'w+', encoding = 'utf-8') as f:
-            f.write(self.response)
-            f.write('\n')
+        with open('showapi_weixin.json', 'r', encoding = 'utf-8') as f:
+            self.response = f.read()
+            f.close()
+
+        # with open('newrand.json', 'w+', encoding = 'utf-8') as f:
+            # f.write(self.response)
+            # f.write('\n')
 
         # return response.text
         # print(self.response)
@@ -45,24 +45,18 @@ class WeixinApi:
 
 
     def obtain(self):
-        content = json.loads(self.response, strict = False)
-        code = content.get('code')
         urlList = []
 
-        if code == 0:
-            newsList = content.get('data')
-            for item in newsList:
-                try:
-                    ctime = item.get('updateTime')
-                    title = item.get('title')
-                    summary = item.get('summary')
-                    imageUrl = item.get('imageUrl')
-                    link = item.get('url')
-
-                    # print(ctime, title, desc, picUrl, link)
-                    urlList.append(link.strip())
-                except:
-                    continue
+        content = json.loads(self.response, strict = False)
+        body = content.get('showapi_res_body')
+        bean = body.get('pagebean')
+        newsList = bean.get('contentlist')
+        for item in newsList:
+            try:
+                link = item.get('link')
+                urlList.append(link.strip())
+            except:
+                break
 
         # print(urlList)
         self.getURL(urlList)
@@ -205,7 +199,7 @@ class WeixinApi:
 
 
 if __name__ == '__main__':
-    keyword = '五粮液'
+    keyword = '茅台'
 
     wx = WeixinApi()
     # wx.removeHTML()
