@@ -1,6 +1,6 @@
-import requests, random, re, execjs, time, hashlib, os, json
-from http import cookiejar
-from urllib import request, parse
+# -*- coding: utf-8 -*-
+
+import time, hashlib, os
 from time import sleep
 from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
 from selenium import webdriver
@@ -8,7 +8,8 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-class MpWeixin:
+
+class Sinomach:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -16,22 +17,29 @@ class MpWeixin:
         self.d = d
         self.dir = self._dir = ''
         self.debug = True
-
-
+        self.date = '2021-02-04'
 
     def crawl(self):
+        print('\n' ,'-' * 10, 'http://www.sinomach.com.cn/', '-' * 10, '\n')
+
         self.browser = webdriver.Firefox()
         self.browser.set_window_position(x = 630, y = 0)
+
         self.total = 0
         i = 0
         status = True
-        file = './mp_weixin/userList.json'
+        file = 'sinomach_weblist.txt'
         with open(file, mode = 'r') as f:
-            keywords = json.load(f)
-            for key in keywords:    # 关键词循环
-                for account in keywords[key]:   # 公众号循环
-                    self.doCrawl(key, account)
+            url = f.readlines()
+            for x in url:
+                n = self.doCrawl(x)
+                if n == -1:
+                    status = False
+                    break
+                else:
+                    i += n
 
+        print('quantity: ', self.total, '\n')
         if status:
             if i > 0:
                 self.deleteFiles()
@@ -42,32 +50,34 @@ class MpWeixin:
             return 'interrupt', 'none', 'error'
 
 
-    def doCrawl(self, key, account):
-        print('key: ', key, 'account: ', account)
+    def doCrawl(self, url):
         self.i = 0
         try:
-            url = 'https://weixin.sogou.com/weixin?type=1&query=' + account + '&ie=utf8&s_from=input&_sug_=y&_sug_type_='
             self.browser.get(url)
         except TimeoutException:
             return -1
 
         while True:
-            newsList = self.browser.find_elements_by_css_selector('div.news-box > ul.news-list2 > li')
+            newsList = self.browser.find_elements_by_css_selector('div.xwzx > div.xwzx1')
             for item in newsList:
-                try:
-                    dateTime = item.find_element_by_css_selector('dl:last-child > dd > span').text
-                except NoSuchElementException:
-                    continue
+                dateTime = item.find_element_by_css_selector('div.xwzx1-2 > h3').text
+                print('time:',self.getTime(dateTime))
 
-                if '前' in dateTime and '天前' not in dateTime:
+                if self.getTime(dateTime) in self.date:
                     self.extract(item)
                 else:
-                    continue
+                    break
 
-            try:
-                self.browser.find_element_by_partial_link_text('下一页').click()  # 点击下一页
-            except NoSuchElementException:
+
+            if self.i < len(newsList):  # 如果当前采集的数量小于当前页的条数，就不翻页了
                 break
+            else:
+                try:
+                    self.browser.find_element_by_partial_link_text('下一页').click()  # 点击下一页
+                    self.i = 0
+                except NoSuchElementException:
+                    break
+
 
 
         if self.total > 0:
@@ -79,13 +89,34 @@ class MpWeixin:
             return 0
 
 
+    def getTime(self, dateTime):
+        t = dateTime.replace('[', '')
+        t = t.replace(']', '')
+
+        if '年' in dateTime or '月' in dateTime or '日' in dateTime:
+            t = t.replace('年', '-')
+            t = t.replace('月', '-')
+            t = t.replace('日', '')
+
+        if '发布时间：' in dateTime:
+            t = t.replace('发布时间：', '')
+
+        if '.' in dateTime:
+            t = t.replace('.', '-')
+
+        if '(' in dateTime or ')' in dateTime:
+            t = t.replace('(', '')
+            t = t.replace(')', '')
+
+        return t
+
     # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_css_selector('dd > a')
-        title = titleInfo.text
+        titleInfo = item.find_element_by_css_selector('div.xwzx1-2 > h2 > a')
+
         try:
             href = titleInfo.get_attribute('href')
-            md5 = self.makeMD5(title)
+            md5 = self.makeMD5(href)
 
             # dict filter
             if md5 in self.d:
@@ -94,6 +125,8 @@ class MpWeixin:
                 self.d[md5] = self.date.split(' ')[0]  # 往dict里插入记录
                 self.i += 1
                 self.total += 1
+
+            title = titleInfo.text
 
             handle = self.browser.current_window_handle  # 拿到当前页面的handle
             titleInfo.click()
@@ -109,20 +142,18 @@ class MpWeixin:
                     self.browser.close()                        # 关闭当前标签页
                     self.browser.switch_to.window(handle)       # 切换到之前的标签页
                     break
-
             print(href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 1152937)
-        except (NoSuchElementException, NoSuchAttributeException) as e:
+            # self.write_new_file(href, title, self.source, self.i, self.date, 760004)
+        except Exception as e:
             print('Element error:', e)
-        except Exception:
-            return
 
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('div#js_content').get_attribute('innerHTML')
+            html = self.browser.find_element_by_css_selector('div.TRS_Editor').get_attribute('innerHTML')
         except NoSuchElementException:
             html = self.browser.page_source
+
 
         return html
 
@@ -152,7 +183,7 @@ class MpWeixin:
 
         # 更新txt文件
         try:
-            fileName = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/cq_md5.txt'
+            fileName = '/home/zran/src/crawler/31/manzhua/crawlpy3/record/sc_md5.txt'
             os.remove(fileName)
             with open(fileName, 'a+') as f:
                 f.write(str(self.d))
@@ -173,7 +204,7 @@ class MpWeixin:
 
 
     def deleteFiles(self):
-        filePath = '/root/estar_save/cq_gov/'
+        filePath = '/root/estar_save/sc_gov/'
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
         current = time.strftime("%Y-%m-%d", timeArray)
@@ -192,9 +223,6 @@ class MpWeixin:
                 os.remove(fileName)
 
 
-
-
-
 if __name__ == '__main__':
-    w = MpWeixin({})
-    w.crawl()
+    s = Sinomach({})
+    s.crawl()

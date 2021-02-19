@@ -1,37 +1,96 @@
 {
-  "intel": [
-    "微型计算机",
-    "科技杂谈",
-    "电脑吧评测室",
-    "21ic电子网",
-    "钛师父",
-    "硬件世界",
-    "电子工程专辑",
-    "半导体行业观察",
-    "笔吧评测室",
-    "锋潮评测室",
-    "雷锋网",
-    "CSDN"
-  ],
-  "茅台": [
-    "小声比比",
-    "中国基金报",
-    "唐书房",
-    "叶檀财经",
-    "经济参考报",
-    "澎湃新闻",
-    "证券时报网",
-    "一本黑",
-    "财新网",
-    "南方都市报",
-    "界面新闻",
-    "中央纪委国家监委网站",
-    "凤凰网财经",
-    "酒业家",
-    "21世纪经济报道",
-    "黄生看金融",
-    "华尔街见闻",
-    "中国新闻周刊",
-    "中国经济网"
-  ]
+    "intel": [
+        {
+            "nickname": "IntelShenzhen",
+            "account": "IntelShenzhen",
+            "preMonth": 0
+        },
+        {
+            "nickname": "并购Intel",
+            "account": "MergerIntel",
+            "preMonth": 111
+        },
+        {
+            "nickname": "xjintel",
+            "account": "xjintelsoda",
+            "preMonth": 222
+        },
+        {
+            "nickname": "Intel课堂",
+            "account": "Atlan9192",
+            "preMonth": 0
+        },
+        {
+            "nickname": "intel FM",
+            "account": "gh_6bb376261058",
+            "preMonth": 0
+        },
+        {
+            "nickname": "IntelHydro",
+            "account": "gh_072aec98096a",
+            "preMonth": 0
+        },
+        {
+            "nickname": "INTEL科技",
+            "account": "gh_d58de3d57124",
+            "preMonth": 0
+        },
+        {
+            "nickname": "IntelMining智能矿业",
+            "account": "IntelMining",
+            "preMonth": 0
+        },
+        {
+            "nickname": "intel电影",
+            "account": "Intel152",
+            "preMonth": 0
+        }
+    ],
+    "nvidia": [
+        {
+            "nickname": "NVIDIA英伟达网络",
+            "account": "Mellanox",
+            "preMonth": 1
+        },
+        {
+            "nickname": "NVIDIA英伟达",
+            "account": "NVIDIA_China",
+            "preMonth": 0
+        },
+        {
+            "nickname": "NVIDIA英伟达企业解决方案",
+            "account": "NVIDIA-Enterprise",
+            "preMonth": 0
+        },
+        {
+            "nickname": "NVIDIA",
+            "account": "XLDMM2020",
+            "preMonth": 0
+        },
+        {
+            "nickname": "NVIDIA SOCCER CLUB",
+            "account": "NV_Soccer",
+            "preMonth": 0
+        },
+        {
+            "nickname": "NVIDIA正在招聘",
+            "account": "gh_8f85645f87c5",
+            "preMonth": 0
+        },
+        {
+            "nickname": "Nvidia英伟达超级游戏助手",
+            "account": "gh_41bf1498b7af",
+            "preMonth": 0
+        },
+        {
+            "nickname": "NVIDIA英伟达开发者社区",
+            "account": "gh_a51c9fcab0f6",
+            "preMonth": 0
+        },
+        {
+            "nickname": "nvidia专业图形计算卡",
+            "account": "sdhx-nvidia",
+            "preMonth": 0
+        }
+    ]
 }
