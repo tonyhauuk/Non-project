@@ -1,4 +1,4 @@
-import requests, random, re, execjs, time, hashlib, os, json
+import requests, random, re, execjs, time, hashlib, os, json, configparser
 from http import cookiejar
 from urllib import request, parse
 from time import sleep
@@ -16,6 +16,7 @@ class MpWeixin:
         self.d = d
         self.dir = self._dir = ''
         self.debug = True
+        self.pageNum = self.getPageNum()
 
 
 
@@ -23,33 +24,27 @@ class MpWeixin:
         self.browser = webdriver.Firefox()
         self.browser.set_window_position(x = 630, y = 0)
         self.total = 0
-        i = 0
-        status = True
+
         file = 'userList.json'
         with open(file, mode = 'r') as f:
             keywords = json.load(f)
             for key in keywords:    # 关键词循环
-                for account in keywords[key]:   # 公众号循环
-                    self.doCrawl(key, account)
+                for value in keywords[key]:   # 公众号循环
+                    self.doCrawl(key, value['nickname'])
 
-        if status:
-            if i > 0:
-                self.deleteFiles()
-                return 'complete', self.source, 'ok'
-            else:
-                return 'complete', 'none', 'ok'
-        else:
-            return 'interrupt', 'none', 'error'
+        self.browser.quit()
 
 
     def doCrawl(self, key, account):
-        print('key: ', key, 'account: ', account)
+        # print('key: ', key, '| account: ', account)
+        print('\n' + key + ' ---> ' + account)
         self.i = 0
         try:
+            sleep(1)
             url = 'https://weixin.sogou.com/weixin?type=1&query=' + account + '&ie=utf8&s_from=input&_sug_=y&_sug_type_='
             self.browser.get(url)
         except TimeoutException:
-            return -1
+            return
 
         while True:
             newsList = self.browser.find_elements_by_css_selector('div.news-box > ul.news-list2 > li')
@@ -60,32 +55,87 @@ class MpWeixin:
                     continue
 
                 if '前' in dateTime and '天前' not in dateTime:
-                    self.extract(item)
+                    self.extract(item, account)
                 else:
                     continue
 
-            try:
-                self.browser.find_element_by_partial_link_text('下一页').click()  # 点击下一页
-            except NoSuchElementException:
+            if self.pageNum > 0:
+                try:
+                    self.browser.find_element_by_partial_link_text('下一页').click()
+                except NoSuchElementException:
+                    break
+            elif self.pageNum == 0:
                 break
 
-
-        if self.total > 0:
-            # self.rename()
-            # self.expire()
-
-            return self.total
-        else:
-            return 0
+        # if self.total > 0:
+            # crawlerfun.renameNew()
+            # crawlerfun.expire(self.date, self.d, self.projectName)
 
 
     # 提取信息，一条的
-    def extract(self, item):
+    def extract(self, item, account):
         titleInfo = item.find_element_by_css_selector('dd > a')
         title = titleInfo.text
+        tag = title + '|' + account
         try:
-            href = titleInfo.get_attribute('href')
-            md5 = self.makeMD5(title)
+            # href = titleInfo.get_attribute('href')
+            md5 = self.makeMD5(tag)
+
+            # dict filter
+            if md5 in self.d:
+                return
+            else:
+                self.d[md5] = self.date.split(' ')[0]  # 往dict里插入记录
+                self.i += 1
+                self.total += 1
+
+            handle = self.browser.current_window_handle  # 拿到当前页面的handle
+            titleInfo.click()
+            link = ''
+            # switch tab window
+            WebDriverWait(self.browser, 10).until(EC.number_of_windows_to_be(2))
+            handles = self.browser.window_handles
+            for newHandle in handles:
+                if newHandle != handle:
+                    self.browser.switch_to.window(newHandle)  # 切换到新标签
+                    sleep(2)  # 等个几秒钟
+                    self.source = self.getPageText()  # 拿到网页源码
+                    link = self.browser.current_url  # 获取当前网页的链接
+                    self.bottomNews(self.browser, handle)  # 底部3条信息
+                    self.browser.close()  # 关闭当前标签页
+                    self.browser.switch_to.window(handle)  # 切换到之前的标签页
+                    break
+            print(title, link)
+            # self.write_new_file(self.link, title, self.source, self.i, self.date, 1152937)
+        except Exception as e:
+            print('extract exception: ', e)
+            print(self.date)
+            return
+
+
+    def bottomNews(self, browser, handle):
+        current = int(time.time())
+        newsList = browser.find_elements_by_css_selector('a.weui-media-box.weui-media-box_appmsg.js_related_item')
+        for item in newsList:
+            try:
+                dateTime = int(item.get_attribute('data-time'))
+            except:
+                continue
+
+            if current - dateTime < 86400:
+                self.extractSingle(item, handle)
+            else:
+                continue
+
+        sleep(1)
+
+
+    def extractSingle(self, item, firstHandle):
+        titleInfo = item.find_element_by_css_selector('div > div.weui_ellipsis_mod_inner')
+        title = titleInfo.text
+        try:
+            # href = item.get_attribute('data-url')
+            md5 = crawlerfun.makeMD5(title)
 
             # dict filter
             if md5 in self.d:
@@ -99,26 +149,27 @@ class MpWeixin:
             titleInfo.click()
 
             # switch tab window
-            WebDriverWait(self.browser, 10).until(EC.number_of_windows_to_be(2))
+            WebDriverWait(self.browser, 10).until(EC.number_of_windows_to_be(3))
             handles = self.browser.window_handles
             for newHandle in handles:
-                if newHandle != handle:
-                    self.browser.switch_to.window(newHandle)    # 切换到新标签
-                    sleep(2)                                    # 等个几秒钟
-                    self.source = self.getPageText()            # 拿到网页源码
-                    self.browser.close()                        # 关闭当前标签页
-                    self.browser.switch_to.window(handle)       # 切换到之前的标签页
+                if newHandle != handle and newHandle != firstHandle:
+                    self.browser.switch_to.window(newHandle)  # 切换到新标签
+                    sleep(1)  # 等个几秒钟
+                    self.source = self.getPageText()  # 拿到网页源码
+                    self.singleLink = self.browser.current_url  # 获取当前网页的链接
+                    self.browser.close()  # 关闭当前标签页
+                    sleep(1)
+                    self.browser.switch_to.window(handle)  # 切换到之前的标签页
                     break
 
-            print(href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 1152937)
-        except (NoSuchElementException, NoSuchAttributeException) as e:
-            print('Element error:', e)
-        except Exception:
+            # self.write_new_file(self.singleLink, title, self.source, self.i, self.date, 1152937)
+        except Exception as e:
+            print('single error:', e)
             return
 
 
     def getPageText(self):  # 获取网页正文
+        self.browser.find_element_by_xpath('/html/body').send_keys(Keys.END)
         try:
             html = self.browser.find_element_by_css_selector('div#js_content').get_attribute('innerHTML')
         except NoSuchElementException:
@@ -192,6 +243,16 @@ class MpWeixin:
                 os.remove(fileName)
 
 
+    def getPageNum(self):
+        configFile = 'weixin.ini'
+        conf = configparser.ConfigParser()
+        conf.read(configFile)
+        sections = conf.sections()
+        option = conf.options(sections[1])
+
+        pageNum = conf.get(sections[1], option[0])  # 采集模式：全采集，精确采集
+
+        return int(pageNum)
 
 
 

@@ -1,0 +1,9 @@
+{
+  "证券日报": ["1", "http://epaper.zqrb.cn/", "div.neir > table", "tbody > tr > td", "td:nth-child(2) > a", "div.neiyee", "392517"],
+  "北京商报": ["1", "http://epaper.bbtnews.com.cn/site1/bjsb/", "body > table > tbody > tr:nth-child(1) > td:nth-child(2) > table:nth-child(2) > tbody > tr > td:nth-child(1) > table:nth-child(3) > tbody > tr", "body > table > tbody > tr:nth-child(1) > td:nth-child(1) > table > tbody > tr:nth-child(1) > td > table:nth-child(3) > tbody > tr > td:nth-child(2) > table > tbody > tr", "td:nth-child(2) > a", "div#ozoom", "918344"],
+  "法制晚报": ["0", "http://epaper.legaldaily.com.cn/fzrb/content/PaperIndex.htm"],
+  "中国经营报": ["1", "http://dianzibao.cb.com.cn/", "body > table > tbody > tr:nth-child(1) > td:nth-child(2) > table:nth-child(2) > tbody > tr > td:nth-child(1) > table:nth-child(2) > tbody > tr > td > table > tbody > tr:nth-child(2) > td > div > table > tbody > tr", "ul.ul02_l > li", "a", "div#ozoom", "415158"],
+  "新京报": ["0"],
+  "农民日报": ["1", "http://szb.farmer.com.cn/"]
+
+}

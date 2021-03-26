@@ -20,16 +20,16 @@ def getUserList():
     mpPage = int(conf.get(sections[0],option[1]))       # 是否采集公众号搜索页面, 0:关闭，1：开启
     delOld = int(conf.get(sections[0],option[2]))       # 是否保留删除的公众号信息, 0:关闭，1：开启
 
+
     fileName = 'userList.json'
     d = getAccountList(fileName)
 
     with open('keywords', mode = 'r', encoding = 'utf-8') as f:
-        keywords = f.readlines()
+        keywords = f.read().splitlines()
 
     if delOld == 1:
         d = saveDelKeyword(d, keywords)
 
-    exit()
     browser = webdriver.Firefox()
     browser.set_window_position(x = 630, y = 0)
 
@@ -110,6 +110,10 @@ def getMpPage(d, browser, keywords):
             except NoSuchElementException:
                 break
 
+        try:
+            d[keyword]
+        except KeyError:
+            d[keyword] = []
 
         # 去重合并新的值
         userList = mergeDuplicate(d[keyword], lst)
@@ -137,6 +141,7 @@ def normalPage(d, browser, keywords, mode):
                 info = dict()
                 info['nickname'] = nickName
                 info['account'] = ''
+                info['preMonth'] = 0
 
                 lst.append(info)
 
@@ -147,6 +152,11 @@ def normalPage(d, browser, keywords, mode):
                     break
             elif mode == 'short':
                 break
+
+        try:
+            d[keyword]
+        except KeyError:
+            d[keyword] = []
 
         # 去重合并新的值
         userList = mergeDuplicate(d[keyword], lst)
@@ -167,17 +177,16 @@ def mergeDuplicate(oldList, newList):
         newNickName = newDict.get('nickname')   # 获取要插入列表的nickname
 
         if newNickName in userSet:              # 如果新列表的值在老列表当中，就更新老列表的preMonth字段
-            if newDict.get('account') != '':    # 如果新值的account字段不为空，则表明从公众号页面采集过来的信息，这种情况才去更新字段，否则不更新
+            if newDict.get('account') == '':    # 如果新值的account字段不为空，则表明从公众号页面采集过来的信息，这种情况才去更新字段，否则不更新
+                continue
+            else:
                 for oldDict in oldList:
                     if oldDict.get('nickname') == newNickName:  # 找到新列表对应老列表的下标
                         oldDict['preMonth'] = newDict.get('preMonth')
                         break
-            else:
-                continue
         else:
             userSet.add(newNickName)        # 如果不存在，记录新值
             tempList.append(newDict)        # 并且把老列表没有的值，记录在一个临时的列表当中
-
 
     # for newDict in newList:
     #     newNickName = newDict.get('nickname')       # 获取要插入列表的nickname
@@ -194,7 +203,7 @@ def mergeDuplicate(oldList, newList):
     #             tempList.append(newDict)        # 并且把老列表没有的值，记录在一个临时的列表当中
     #             break
 
-    origin = tempList.extend(oldList)
+    origin = tempList + oldList
     userSet = tempList = None
 
     return origin
@@ -207,7 +216,9 @@ def saveDelKeyword(d, keywords):
     origin = d
 
     for k, v in d.items():
-        if k not in keywords:
+        if k in keywords:
+           continue
+        else:
             newDict[k] = v
             delKeyword.append(k)
 
@@ -224,7 +235,7 @@ def saveDelKeyword(d, keywords):
 
     # 更新txt文件
     try:
-        fileName = '/home/zran/src/crawler/32/manzhua/crawlpy3/mp_weixin/' + fileName
+        #fileName = '/home/zran/src/crawler/32/manzhua/crawlpy3/mp_weixin/' + fileName
         os.remove(fileName)
         with open(fileName, 'a+') as f:
             f.write(str(saveDict))
@@ -238,8 +249,9 @@ def saveDelKeyword(d, keywords):
 
 
 if __name__ == '__main__':
-    # getUserList()
+    getUserList()
 
+    exit()
     a = [{"nickname": "IntelShenzhen","account": "IntelShenzhen","preMonth": 0},
          {"nickname": "IIIIII","account": "MergerIntel","preMonth": 888},
          {"nickname": "xjintel","account": "xjintelsoda","preMonth": 369},
