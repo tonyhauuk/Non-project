@@ -30,7 +30,7 @@ docker-py==1.10.6
 docker-pycreds==0.4.0
 docutils==0.15.2
 EasyProcess==0.3
-eventlet==0.25.2
+eventlet==0.31.0
 Flask==1.1.2
 Flask-Auth==0.85
 Flask-Email==1.4.4
@@ -156,7 +156,7 @@ docutils==0.15.2
 EasyProcess==0.3
 easytrader==0.22.0
 easyutils==0.1.7
-eventlet==0.25.2
+eventlet==0.31.0
 fake-useragent==0.1.11
 Flask==1.1.2
 Flask-Auth==0.85
@@ -290,7 +290,7 @@ docutils==0.15.2
 EasyProcess==0.3
 easytrader==0.22.0
 easyutils==0.1.7
-eventlet==0.25.2
+eventlet==0.31.0
 fake-useragent==0.1.11
 Flask==1.1.2
 Flask-Auth==0.85
