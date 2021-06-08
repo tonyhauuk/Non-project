@@ -66,7 +66,7 @@ panda==0.3.1
 pandas==1.0.3
 parsel==1.6.0
 passlib==1.7.2
-Pillow==7.1.2
+Pillow==8.2.0
 pprint==0.1
 Protego==0.1.16
 protobuf==3.11.3
@@ -194,7 +194,7 @@ panda==0.3.1
 pandas==1.0.3
 parsel==1.6.0
 passlib==1.7.2
-Pillow==7.1.2
+Pillow==8.2.0
 pprint==0.1
 Protego==0.1.16
 protobuf==3.11.3
@@ -329,7 +329,7 @@ panda==0.3.1
 pandas==1.0.3
 parsel==1.6.0
 passlib==1.7.2
-Pillow==7.1.2
+Pillow==8.2.0
 pprint==0.1
 Protego==0.1.16
 protobuf==3.14.0
