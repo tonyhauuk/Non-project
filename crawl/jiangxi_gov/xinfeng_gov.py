@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import time, hashlib, os
+import time, hashlib, os, datetime
 from time import sleep
 from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
 from selenium import webdriver
@@ -9,9 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-# import cralwerfun
-
-class Liuyan_people:
+class Xinfeng_gov:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -22,7 +20,7 @@ class Liuyan_people:
 
 
     def crawl(self):
-        print('\n', '-' * 10, 'http://liuyan.people.com.cn/', '-' * 10, '\n')
+        print('\n' ,'-' * 10, 'http://www.jxxf.gov.cn/xfxrmzfyyh/index.shtml', '-' * 10, '\n')
 
         self.browser = webdriver.Firefox()
         self.browser.set_window_position(x = 630, y = 0)
@@ -30,7 +28,7 @@ class Liuyan_people:
         self.total = 0
         i = 0
         status = True
-        file = './liuyan_people_weblist.txt'
+        file = './xinfeng_gov_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
@@ -52,22 +50,31 @@ class Liuyan_people:
 
     def doCrawl(self, url):
         self.i = 0
+        self.url = url
         try:
             self.browser.get(url)
         except TimeoutException:
             return -1
 
-        start = 0
-        while True:
-            newsList = self.browser.find_elements_by_css_selector('ul#list_content > li')
-            end = len(newsList)
-            for item in newsList[start:end]:
-                dateTime = item.find_element_by_css_selector('h3 > span').text.strip()
+        if 'xfxrmzfyyh' in url:
+            newsCss = 'div.pageList > ul > li'
+            dateCss = 'span'
+        else:
+            newsCss = 'ul.pageList > li'
+            dateCss = 'span'
 
-                if self.date.split(' ')[0] in dateTime:
-                    status = self.extract(item)
-                    if status:
-                        break
+
+
+        while True:
+            newsList = self.browser.find_elements_by_css_selector(newsCss)
+            for item in newsList:
+                try:
+                    dateTime = item.find_element_by_css_selector(dateCss).text
+                except NoSuchElementException:
+                    continue
+
+                if dateTime in self.date:
+                    self.extract(item)
                 else:
                     break
 
@@ -75,12 +82,10 @@ class Liuyan_people:
                 break
             else:
                 try:
-                    start = end + 1
-                    self.browser.find_element_by_css_selector('div#show_more').click()
-                    sleep(1)
-                except:
+                    self.browser.find_element_by_partial_link_text('下一页').click()
+                    self.i = 0
+                except NoSuchElementException:
                     break
-
 
         if self.total > 0:
             # self.rename()
@@ -91,21 +96,21 @@ class Liuyan_people:
             return 0
 
 
-    # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_css_selector('h2 > b > a')
-        title = titleInfo.text
+        titleInfo = item.find_element_by_tag_name('a')
         try:
             href = titleInfo.get_attribute('href')
             md5 = self.makeMD5(href)
 
             # dict filter
             if md5 in self.d:
-                return True
+                return
             else:
                 self.d[md5] = self.date.split(' ')[0]  # 往dict里插入记录
                 self.i += 1
                 self.total += 1
+
+            title = titleInfo.text
 
             handle = self.browser.current_window_handle  # 拿到当前页面的handle
             titleInfo.click()
@@ -119,17 +124,20 @@ class Liuyan_people:
                     sleep(2)                                        # 等个几秒钟
                     self.source = self.getPageText()                # 拿到网页源码
                     self.browser.close()                            # 关闭当前标签页
-                    self.browser.switch_to.window(handle)           # 切换到之前的标签页
+                    self.browser.switch_to.window(handle)  # 切换到之前的标签页
                     break
-            print(self.i, href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 92816)
+
+            print(href, title)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 1166368)
+        except (NoSuchElementException, NoSuchAttributeException) as e:
+            print('Element error:', e)
         except Exception:
-            return False
+            pass
 
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('p.zoom.content').get_attribute('innerHTML')
+            html = self.browser.find_element_by_css_selector('div#zoomcon').get_attribute('innerHTML')
         except NoSuchElementException:
             html = self.browser.page_source
 
@@ -146,6 +154,61 @@ class Liuyan_people:
         return enc
 
 
+    # 删除过期的记录
+    def expire(self):
+        # 检查过期数据
+        li = []
+        current = self.date.split(' ')[0]
+        for k, v in self.d.items():
+            if current != v:
+                li.append(k)
+
+        # 删除字典里过期的数据
+        for i in li:
+            self.d.pop(i)
+
+        # 更新txt文件
+        try:
+            fileName = '/home/zran/src/crawler/31/manzhua/crawlpy3/record/sc_md5.txt'
+            os.remove(fileName)
+            with open(fileName, 'a+') as f:
+                f.write(str(self.d))
+        except Exception as e:
+            print(e)
+
+
+    # 重新修改文件夹名称
+    def rename(self):
+        try:
+            root = '/estar/newhuike2/1/'
+            lst = os.listdir(root)
+            for l in lst:
+                if '_' in l:
+                    os.rename(root + l, root + l.strip('_'))
+        except:
+            pass
+
+
+    def deleteFiles(self):
+        filePath = '/root/estar_save/sc_gov/'
+        timeStamp = time.time()
+        timeArray = time.localtime(timeStamp)
+        current = time.strftime("%Y-%m-%d", timeArray)
+        name = os.listdir(filePath)
+
+        for i in name:
+            try:
+                fileName = filePath + i
+                fileInfo = os.stat(fileName)
+            except FileNotFoundError:
+                continue
+            ts = fileInfo.st_mtime
+            timeArr = time.localtime(ts)
+            date = time.strftime("%Y-%m-%d", timeArr)
+            if current != date:
+                os.remove(fileName)
+
+
 if __name__ == '__main__':
-    sc = Liuyan_people({})
-    sc.crawl()
+    g = Xinfeng_gov({})
+    g.crawl()

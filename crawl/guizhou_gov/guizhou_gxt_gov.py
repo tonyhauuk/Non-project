@@ -1,27 +1,25 @@
 # -*- coding: utf-8 -*-
 
-import time, datetime, re, hashlib, os, sys
+import time, hashlib, os
 from time import sleep
 from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+#import cralwerfun
 
-
-class Qie:
+class Guizhou_gxt_gov:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
         self.date = time.strftime('%Y-%m-%d %H:%M:%S', timeArray)
         self.d = d
         self.dir = self._dir = ''
-        # self.ipnum = crawlerfun.ip2num('61.130.181.229')
         self.debug = True
 
-
     def crawl(self):
-        print('\n', '-' * 10, 'http://www.tushi366.com/', '-' * 10, '\n')
+        print('\n' ,'-' * 10, 'http://gxt.guizhou.gov.cn/', '-' * 10, '\n')
 
         self.browser = webdriver.Firefox()
         self.browser.set_window_position(x = 630, y = 0)
@@ -29,7 +27,7 @@ class Qie:
         self.total = 0
         i = 0
         status = True
-        file = 'omnqq_weblist.txt'
+        file = './guizhou_gxt_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
@@ -40,7 +38,6 @@ class Qie:
                 else:
                     i += n
 
-        print('quantity: ', self.total, '\n')
         if status:
             if i > 0:
                 return 'complete', self.source, 'ok'
@@ -54,36 +51,59 @@ class Qie:
         self.i = 0
         try:
             self.browser.get(url)
+            sleep(2)
         except TimeoutException:
             return -1
 
-        self.browser = webdriver.Firefox()
-        self.browser.set_window_position(x = 630, y = 0)
-        status = False
 
+        if 'gxdt' in url:
+            newsCss = 'ul.newsList > li'
+            dateCss = 'span'
+        elif 'zwgk' in url:
+            newsCss = 'tbody#idData > tr.c'
+            dateCss = 'td:nth-child(2)'
 
-        newsList = self.browser.find_elements_by_css_selector('div.author_mod.channel_mod > ul.list > li')
+        newsList = self.browser.find_elements_by_css_selector(newsCss)
         for item in newsList:
-            titleInfo = item.find_element_by_css_selector('div.detail > h3 > a')
-            title = titleInfo.text
-            md5 = self.makeMD5(title)
-            # dict filter
-            if md5 in self.d:
-                break
+            try:
+                dateTime = item.find_element_by_css_selector(dateCss).text
+            except NoSuchElementException:
+                continue
+
+            if dateTime in self.date:
+                self.extract(item)
             else:
-                status = self.extract(titleInfo, title)
-                if status:
-                    break
-                else:
-                    self.d[md5] = self.date.split(' ')[0]  # 往dict里插入记录
-                    self.i += 1
+                break
 
 
+
+        if self.total > 0:
+            # self.rename()
+            # self.expire()
+
+            return self.total
+        else:
+            return 0
 
 
     # 提取信息，一条的
-    def extract(self, titleInfo, title):
+    def extract(self, item):
+        titleInfo = item.find_element_by_css_selector('a')
+
         try:
+            href = titleInfo.get_attribute('href')
+            md5 = self.makeMD5(href)
+
+            # dict filter
+            if md5 in self.d:
+                return
+            else:
+                self.d[md5] = self.date.split(' ')[0]  # 往dict里插入记录
+                self.i += 1
+                self.total += 1
+
+            title = titleInfo.text
+
             handle = self.browser.current_window_handle  # 拿到当前页面的handle
             titleInfo.click()
 
@@ -94,30 +114,23 @@ class Qie:
                 if newHandle != handle:
                     self.browser.switch_to.window(newHandle)    # 切换到新标签
                     sleep(2)                                    # 等个几秒钟
-                    self.source, url, date = self.getPageText() # 拿到网页源码
+                    self.source = self.getPageText()            # 拿到网页源码
                     self.browser.close()                        # 关闭当前标签页
                     self.browser.switch_to.window(handle)       # 切换到之前的标签页
                     break
-
-            if date in self.date:
-                print(url, title)
-                return False
-            else:
-                return True
-            # self.write_new_file(url, title, self.source, self.i, self.date, 1171790)
+            print(href, title)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 1171688)
         except Exception:
-            return True
+            return
 
 
     def getPageText(self):  # 获取网页正文
-        url = self.browser.current_url
-        date = self.browser.find_element_by_css_selector('div.desc > span.date').text
         try:
-            pageHTML = self.browser.find_element_by_css_selector('div#content > section.article').get_attribute('innerHTML')
+            html = self.browser.find_element_by_css_selector('div.view.TRS_UEDITOR.trs_paper_default.trs_web').get_attribute('innerHTML')
         except NoSuchElementException:
-            pageHTML = self.browser.page_source
+            html = self.browser.page_source
 
-        return pageHTML, url, date
+        return html
 
 
     # 生成md5信息
@@ -145,7 +158,7 @@ class Qie:
 
         # 更新txt文件
         try:
-            fileName = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/cnstock_md5.txt'
+            fileName = '/home/zran/src/crawler/31/manzhua/crawlpy3/record/sc_md5.txt'
             os.remove(fileName)
             with open(fileName, 'a+') as f:
                 f.write(str(self.d))
@@ -164,8 +177,9 @@ class Qie:
         except:
             pass
 
+
     def deleteFiles(self):
-        filePath = '/root/estar_save/cnstock/'
+        filePath = '/root/estar_save/sc_gov/'
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
         current = time.strftime("%Y-%m-%d", timeArray)
@@ -184,6 +198,12 @@ class Qie:
                 os.remove(fileName)
 
 
+    def getTime(self, dateTime):
+        t = dateTime.replace('[', '')
+        t = t.replace(']', '')
+
+        return t
+
 if __name__ == '__main__':
-    q = Qie({})
-    q.crawl()
+    sc = Guizhou_gxt_gov({})
+    sc.crawl()

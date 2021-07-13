@@ -1,464 +1,273 @@
 # -*- coding: utf-8 -*-
-from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException, NoSuchWindowException
+
+import time, datetime, re, hashlib, os, sys
+from datetime import datetime, date, timedelta
+from time import sleep
+from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-import time
-import sys
-import os
-import hashlib
-from os.path import join, getsize
-import shutil
-from datetime import datetime, date, timedelta
-import datetime
-from bloom_filter import BloomFilter
-
-import threading
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import crawlerfun
 
 class Baijiahao:
-    url = ''
-    tasktype = ''
-    driver = ''
-    returnDataType = ''
-    index = 0
-    browser = ''
-    instance = ''
-
     def __init__(self, browser):
-        self.browser = browser
+        timeStamp = time.time()
+        timeArray = time.localtime(timeStamp)
+        self.date = time.strftime('%Y-%m-%d %H:%M:%S', timeArray)
         self.timeStamp = int(time.time())
-        self.filePath = './baidu/'
-        self.d = {}
-        self.initDict()
-        # self.writeDict()
-
-
-        # self.url = browser.url
-        # self.tasktype = browser.tasktype
-        # self.browser = browser.driver
-        # self.returnDataType = browser.returnDataType
-        # self.index = browser.index
-        # self.instance = DriverElement()
+        self.d = self.initDict()
+        self.url = browser.url
+        self.browser = browser.driver
+        self.dir = self._dir = self.source = ''
+        self.ipnum = crawlerfun.ip2num(browser.ip)
+        self.debug = True
 
     def crawl(self):
-        print(' -------   execution  --------- \n')
-        limit = 'ok'
-        self.url = 'https://www.baidu.com/s?ie=utf-8&cl=2&medium=2&rtt=4&bsst=1&rsv_dl=news_t_sk&tn=news&wd=wizcoz%E6%A0%AA%E5%BC%8F%E4%BC%9A%E7%A4%BE&tfflag=0'
-
+        self.i = self.total = 0
+        error = False
+        n = 0
         try:
-            # if 'error' == self.instance.element_open_link(self.browser, self.url, self.index, sleeptime = 0):
-            #     limit = 'error'
-
             self.browser.get(self.url)
+            sleep(2)
         except:
-            print('page can not open !!!')
-
-        if '抱歉，没有找到' in self.browser.page_source:
-            print('没有')
-            return
+            return 'interrupt', 'none', 'error'
 
         try:
-            print('try start ./../....')
-            completed = 'complete'
-            # self.browser.find_element_by_xpath('/html/body').send_keys(Keys.END)
-            self.i = 0
+            if 'wappass.baidu.com/' in self.browser.current_url:
+                return 'complete', 'none', 'ok'
+        except:
+            pass
 
-            while True:
+        for i in range(10):
+            try:
+                newsList = self.browser.find_elements_by_css_selector('div > div.result-op.c-container.xpath-log.new-pmd')
+            except:
+                return 'interrupt', 'none', 'error'
 
-                items = self.browser.find_elements_by_css_selector('div#wrapper_wrapper > div#container > div#content_left > div > div.result')
-
-
-                # items = self.element.elements_lock(self.browser, 'div#wrapper_wrapper > div#container > div#content_left > div > div.result', self.index, sleeptime = 0)
-
-                for item in items:
-                    time = item.find_element_by_css_selector('div.c-summary.c-row p').text
-
-                    if '小时前' in time or '分钟前' in time:
-                        self.extract(item)
-                    else:
-                        year = datetime.datetime.now().year
-                        splitDate = time.split(str(year))
-                        fullTime = str(year) + splitDate[1]
-                        ts = self.calcDate(fullTime)
-                        oneDay = 60 * 60 * 24
-
-                        if self.timeStamp - ts < oneDay:
-                            self.extract(item)
-                        else:
-                            break
-
-                if self.i == 0:
-                    break
-
+            for item in newsList:
                 try:
-                    if self.i == 10:
-                        self.browser.find_element_by_partial_link_text('下一页').click()
-                        # self.browser.find_element_by_css_selector('html body div#wrapper.wrapper_l p#page > a.n').click()
+                    dateTime = item.find_element_by_css_selector('div.news-source > span.c-color-gray2.c-font-normal').text
+                except:
+                    continue
+
+                if '小时前' in dateTime or '分钟前' in dateTime or '秒前' in dateTime:
+                    self.extract(item)
+                elif '昨天' in dateTime:
+                    splitDate = dateTime.split('昨天')
+                    yesterday = (date.today() + timedelta(days = -1)).strftime("%Y-%m-%d")
+                    ft = yesterday + ' ' + splitDate[1]
+                    ts = self.calcDate(ft)
+                    oneDay = 60 * 60 * 24
+
+                    if self.timeStamp - ts < oneDay:
+                        status = self.extract(item)
+                        if status == 0:
+                            break
+                        elif status == -1:
+                            error = True
+                            break
                     else:
                         break
-                except NoSuchElementException:
+                else:
                     break
 
-                self.i = 0
-            return completed, '', limit
-        except Exception as e:
-            print('Crawl error: ', e)
+            if error:
+                break
+
+            if self.i < len(newsList):
+                break
+            else:
+                try:
+                    self.browser.find_element_by_partial_link_text('下一页').click()
+                    self.i = 0
+                except:
+                    break
+
+
+        print('quantity:', self.total, '\n')
+
+        if error:
+            return 'interrupt', 'none', 'error'
+
+        if n == 0:
+            if self.total > 0:
+                self.rename()
+                self.expire()
+
+                return 'complete', self.source, 'ok'
+            else:
+                return 'complete', 'none', 'ok'
+        else:
+            return 'interrupt', 'none', 'error'
+
 
     # 提取信息，一条的
     def extract(self, item):
         try:
-            interval = 0.5
-            current = int(time.time())
-            content = item.find_element_by_css_selector('div.result h3.c-title a')
-            href = content.get_attribute('href')
-            md5 = self.makeMD5(href)
+            source = ''
+            titleInfo = item.find_element_by_css_selector('h3.news-title_1YtI1 > a')
+            href = titleInfo.get_attribute('href')
+            title = titleInfo.text
+            md5 = self.makeMD5(title)
 
             # dict filter
             if md5 in self.d:
-                # 更新当前文章的时间戳
-                # self.d[md5] = str(current)
-                return
+                return 0
             else:
-                self.d[md5] = str(current)  # 往dict里插入记录
-                self.i += 1
+                handle = self.browser.current_window_handle  # 拿到当前页面的handle
+                titleInfo.click()
 
-            title = content.text
-            handle = self.browser.current_window_handle
-            content.click()
-            source = ''
-            time.sleep(interval)
+                # switch tab window
+                WebDriverWait(self.browser, 10).until(EC.number_of_windows_to_be(2))
+                handles = self.browser.window_handles
+                for newHandle in handles:
+                    if newHandle != handle:
+                        self.browser.switch_to.window(newHandle)        # 切换到新标签
+                        sleep(2)                                        # 等个几秒钟
+                        source = self.getPageText()                     # 拿到网页源码
+                        sleep(1)                                        # 等个几秒钟
+                        self.browser.close()                            # 关闭当前标签页
+                        sleep(1)                                        # 等个几秒钟
+                        self.browser.switch_to.window(handle)           # 切换到之前的标签页
+                        break
 
-            # switch tab window
-            handles = self.browser.window_handles
-            for newHandle in handles:
-                if newHandle != handle:
-                    self.browser.switch_to.window(newHandle)
-                    source = self.browser.page_source
-                    self.browser.close()
-                    self.browser.switch_to.window(handles[0])
+                if source == '':
+                    return -1
+                else:
+                    self.d[md5] = self.date.split(' ')[0]  # 往dict里插入记录
+                    self.i += 1
+                    self.total += 1
 
-            time.sleep(interval)
-            objStr = href + '\n' + title + '\n0\n\n\n\n' + source
+                    self.write_new_file(href, title, source, self.i, self.date, 1160102)
 
-            self.writeFile(objStr, current, self.i)
-        except (NoSuchElementException, NoSuchAttributeException) as e:
-            print('Element error:', e)
-        except Exception as e:
-            print('Extract Exception: ', e)
-
-
-    # html生成文件，爬取下来的信息写到文件当中
-    def writeFile(self, objStr, ts, i):
-        try:
-            if not os.path.exists(self.filePath):
-                os.mkdir(self.filePath)
-
-            fileName = self.filePath + str(ts) + '_' + str(i) + '.html'
-            with open(fileName, 'w+', encoding = 'utf-8') as obj:
-                obj.write(objStr)
-
-        except Exception as e:
-            print('write file error: ', e)
-
-
-    # 写入dict记录
-    def writeDict(self):
-        try:
-            threads = []
-            t = threading.Thread(target = Baijiahao.deleteExpire, args = (self, ))
-            threads.append(t)
-            threads[0].start()
-            threads[0].join()
-
-        except Exception as e:
-            print('write dict file error: ', e)
-
-    # 定时把内存中的字典写入到文件中
-    def cleanAndWrite(self):
-        interval = 60 * 60 * 1
-        fileName = './record/baijiahao.txt'
-        while True:
-            time.sleep(interval)
-            with open(fileName, 'a+') as f:
-                f.write(str(self.d))
-
-                # for k, v in self.d.items():
-                #     with open(fileName, 'a+') as f:
-                #         string = k + '_' + v
-                #         f.write(string + '\n')  # 记录文件
-
-
-    # 日期转换成时间戳
-    def calcDate(self, fullTime):
-        time1 = fullTime + ':00'
-        timeArr = time.strptime(time1, "%Y年%m月%d日 %H:%M:%S")
-        timeStamp = int(time.mktime(timeArr))
-
-        return timeStamp
-
-    # 清理文件夹
-    def cleanDir(self, dir):
-        try:
-            size = 0
-            for root, dirs, files in os.walk(dir):
-                size += sum([getsize(join(root, name)) for name in files])
-
-            size = int(size / 1024)
-
-            capa = 50000  # 值是KB
-            if size > capa:
-                shutil.rmtree(dir)
-                os.mkdir(dir)
+                    return 1
         except:
-            print('No file !!!')
+            return 0
 
-    # 初始化字典， 把从文件当中读出来的字符串转成字典格式，写入到内存当中
-    def initDict(self):
-        file = './record/baijiahao.txt'
+
+    def getPageText(self):  # 获取网页正文
+        if 'wappass.baidu.com/' in self.browser.current_url:
+            return ''
+
         try:
-            with open(file, mode = 'r') as f:
-                line = f.readline()
-                if line != '':
-                    self.d = eval(str(line)) # 直接把字符串转成字典格式
+            html = self.browser.find_element_by_css_selector('div.index-module_articleWrap_2Zphx').get_attribute('innerHTML')
         except:
-            # 如果没有文件，则直接创建文件
-            fd = open(file, mode = 'a+', encoding = 'utf-8')
-            fd.close()
+            html = self.browser.page_source
 
-    # 生成md5
+        return html
+
+
+    # 生成md5信息
     def makeMD5(self, link):
         m = hashlib.md5()
         b = link.encode(encoding = 'utf-8')
         m.update(b)
-        link = m.hexdigest()
+        enc = m.hexdigest()
 
-        return link
-
-
-    # 删除过期记录
-    def deleteExpire(self):
-        now = datetime.datetime.now()
-        nextTime = now + datetime.timedelta(days = +1)
-        nextYear = nextTime.date().year
-        nextMonth = nextTime.date().month
-        nextDay = nextTime.date().day
-        # 时间设置成凌晨3点，这个时间段信息相对来说比较少，更新文件冲突较少
-        nextDayTime = datetime.datetime.strptime(str(nextYear) + '-' + str(nextMonth) + '-' + str(nextDay) + ' 03:00:00', '%Y-%m-%d %H:%M:%S')
-        timerStartTime = (nextDayTime - now).total_seconds()
-        timer = threading.Timer(timerStartTime, self.expire)
-        timer.start()
+        return enc
 
 
-    # 内存字典：每天凌晨3点执行这个程序，程序检查文件当中的过期数据
+    # 删除过期的记录
     def expire(self):
         # 检查过期数据
         li = []
-        current = int(time.time())
-        day = 60 * 60 * 24
+        current = self.date.split(' ')[0]
         for k, v in self.d.items():
-            if current - int(v) > day: # 如果时间戳的差大于1天的秒数，就删除
+            if current != v:
                 li.append(k)
 
         # 删除字典里过期的数据
         for i in li:
             self.d.pop(i)
 
-
         # 更新txt文件
-        fileName = './record/baijiahao.txt'
-        os.remove(fileName)
-        with open(fileName, 'a+') as f:
-            f.write(str(self.d))
-
-
-        # 文件夹过大删除
-        self.cleanDir('./baidu/')
-
-        end = int(time.time()) - current
-        # interval = 86400 - end  # 下一次间隔多久来执行这个程序，每次的执行时间不固定，所以得用总时间来减去当前所用的时间，得出的差就是执行下次一次需要的秒数
-        # timer = threading.Timer(interval, self.expire)
-        # timer.start()
-
-
-    # 文件形式： 每天凌晨3点执行这个程序，程序检查文件当中的过期数据
-    def expireFile(self):
         try:
-            lst = list()
-            current = int(time.time())
-            # 读取当前的文件
-            with open ('./record/baijiahao.txt', mode = 'r') as f:
-                lines = f.readlines()
-                day = 60 * 60 * 24
-                if len(lines) > 0:
-                    for line in lines:
-                        t = int(line.split('_')[1])
-                        if current - t < day:  # 判断如果时间在一天之内，加入到数组中
-                            lst.append(line)
+            fileName = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/baijiahao_md5.txt'
+            os.remove(fileName)
+            with open(fileName, 'a+') as f:
+                f.write(str(self.d))
+        except Exception as e:
+            print(e)
 
-            # 写一个新的文件，记录的都是删除过期记录的信息
-            with open('./record/tmp_baijiahao.txt', mode = 'a+', encoding = 'utf-8') as f:
-                for text in lst:
-                    f.write(text)
 
-            # 删除旧文件，把tmp文件名修改成刚才删除文件的名称
-            os.remove('./record/baijiahao.txt')
-            os.rename('./record/tmp_baijiahao.txt', './record/baijiahao.txt')
+    def initDict(name):
+        d = {}
+        file = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/baijiahao_md5.txt'
+        try:
+            with open(file, mode = 'r') as f:
+                line = f.readline()
+                if line != '':
+                    d = eval(str(line))  # 直接把字符串转成字典格式
 
-            end = int(time.time()) - current
-            interval = 86400 - end  # 下一次间隔多久来执行这个程序，每次的执行时间不固定，所以得用总时间来减去当前所用的时间，得出的差就是执行下次一次需要的秒数
-            timer = threading.Timer(interval, self.expireFile)
-            timer.start()
+            return d
+        except:
+            # 如果没有文件，则直接创建文件
+            fd = open(file, mode = 'a+', encoding = 'utf-8')
+            fd.close()
+
+            return d
+
+
+    # 重新修改文件夹名称
+    def rename(self):
+        try:
+            root = '/estar/newhuike2/1/'
+            lst = os.listdir(root)
+            for l in lst:
+                if '_' in l:
+                    os.rename(root + l, root + l.strip('_'))
         except:
             pass
 
 
+    # 日期转换成时间戳
+    def calcDate(self, fullTime):
+        time1 = fullTime + ':00'
+        timeArr = time.strptime(time1, '%Y-%m-%d %H:%M:%S')
+        timeStamp = int(time.mktime(timeArr))
+
+        return timeStamp
 
 
+    # 写一个新文章
+    def write_new_file(self, url, title, source, i, time, id):
+        content = '''
+                <html>
+                    <head> 
+                       <meta charset="utf-8">
+                       <meta name="keywords" content="estarinfo">
+                       <title>''' + title + '''</title>
+                    </head> 
+                    <body>
+                        <h1 class="title">''' + title + '''</h1>
+                        <span class="time">''' + time + '''</span>
+                        <span class="source">''' + str(id) + '''</span>
+                        <div class="article">''' + source + '''</div>
+                    </body>
+                </html>
+                '''
+        page_text = url + '\n' + title + '\n' + str(id) + '\n\n\n\n' + content
 
-    ''' 
-        下面的程序暂时用不到，先保留
-    '''
+        if self.debug:
+            print('count:', self.total, ' --- ', title)
 
-    # 检查bloomfilter的记录
-    def checkBloom(self, fileName):
-        try:
-            if not os.path.exists(fileName):
-                yesterday = (date.today() + timedelta(days = -1)).strftime('%Y-%m-%d')
-                with open(yesterday + '-bloom.txt', 'r') as f:
-                    line = f.readlines()
-                    self.bloom.add(line)
+        if '' == self._dir:
+            self.crawl_mkdir()
 
-                os.remove(yesterday + '-bloom.txt')
-
-            # size = os.path.getsize(fileName)
-            # if size == 0:
-            #     return
-            # content = ''
-            # current = int(time.time())
-            # day = 60 * 60 * 24
-            #
-            # if size > 2000:
-            #     self.bloom = BloomFilter(max_elements = 1000000, error_rate = 0.01)
-            #
-            #     file = open(fileName)
-            #     for line in file.readlines():
-            #         st = int(line.split('_')[0])
-            #
-            #         if current - st > current - day:
-            #             content += line
-            #         else:
-            #             continue
-            #
-            #     file.close()
-            #
-            #     with open(fileName, 'r+') as f:
-            #         f.seek(0)
-            #         f.truncate()  # 清空文件
-            #         f.write(content) # 重新写入新的文件
-
-        except Exception as e:
-            print('Check Bloom-Filter error: ', e)
-
-    # 记录文件的检查函数
-    def fileChecker(self, link):
-        status = False
-        files = ['./record/old.txt', './record/new.txt']
-        for file in files:
-            if not os.path.isfile(file):
-                fd = open(file, mode = 'a+', encoding = 'utf-8')
-                fd.close()
-
-        for file in files:
-            with open(file, 'r') as f:
-                lines = f.readlines()
-
-            if len(lines) > 0:  # 如果文件有记录，就继续检查
-                for line in lines:
-                    if link in line:
-                        status = True
-                        break
-
-                if not status:
-                    size = os.path.getsize(file) / 1024 / 1024
-                    size = round(size, 2)
-                    if size < 5:
-                        with open(file, mode = 'a+', encoding = 'utf-8') as obj:
-                            obj.write(link + '\n')
-                            break
-                    else:
-                        if file == './record/old.txt':  # old.txt file more than 5MB
-                            with open('./record/new.txt', mode = 'a+', encoding = 'utf-8') as obj:
-                                obj.write(link + '\n')
-                                break
-                        elif file == './record/new.txt':  # 如果new文件大于5MB，先删除old文件，并且把new文件名修改成old
-                            os.remove('./record/old.txt')
-                            os.rename('./record/new.txt', './record/old.txt')
-                            with open('./record/new.txt', mode = 'a+', encoding = 'utf-8') as obj:
-                                obj.write(link + '\n')
-                            break
-
-                    status = False
-                    # return status
-            else:  # 如果文件没有记录，直接写入
-                with open(file, mode = 'a+', encoding = 'utf-8') as obj:
-                    obj.write(link + '\n')
-
-                status = False
-                # return status
-
-            if status:
-                return True
-            else:
-                return False
-
-    # 初始化bloomfilter
-    def initBF(self):
-        # 先读取前一天的记录，如果没有，建立一个当天的新文件
-        try:
-            yesterday = (date.today() + timedelta(days = -1)).strftime('%Y-%m-%d')
-            file = './record/' + yesterday + '_baijiahao.txt'
-            with open(file, mode = 'r') as f:
-                lines = f.readlines()
-
-            current = int(time.time())
-            day = 60 * 60 * 24
-            if len(lines) > 0:
-                for line in lines:
-                    t = int(line.split('_')[0])
-                    if current - t < day:  # 判断如果时间在一天之内，也加入到filer里
-                        self.filter.add(line)
-        except:
-            # 建立当天的新文件，如果有记录，就加入到filter里
-            file = str(datetime.date.today()) + '-bloom.txt'
-            with open(file, mode = 'r') as f:
-                lines = f.readlines()
-
-            if len(lines) > 0:
-                for line in lines:
-                    self.filter.add(line)
+        filename = self._dir + 'iask_' + str(i) + '_' + str(len(self.d)) + '.htm-2'
+        for num in range(2):
+            if 1 == crawlerfun.write_file(filename, page_text, ifdisplay = 0):
+                break
+            else:  # 有时目录会被c程序删掉
+                crawlerfun.mkdir(self._dir)
 
 
-if __name__ == '__main__':
-    browser = webdriver.Firefox()
-    process = Baijiahao(browser)
-    try:
-        while True:
-            process.crawl()
-            process.expire()
-            time.sleep(2)
+    def crawl_mkdir(self):
+        dirroot = '/estar/newhuike2/1/'
+        tm_s, tm_millisecond = crawlerfun.get_timestamp(ifmillisecond = 1)
+        dirsmall = 'iask' + str(self.ipnum) + '.' + str(1) + '.' + str(tm_s) + '.' + str(tm_millisecond) + '/'
+        self._dir = dirroot + '_' + dirsmall
+        self.dir = dirroot + dirsmall
 
-    except TimeoutException:
-        print('The connection has timed out!')
-    finally:
-        browser.quit()
-
-'''
-with open 模式
-模式 	可做操作 	若文件不存在 	是否覆盖
-r 	    只能读 	        报错 	    -
-r+ 	    可读可写 	    报错 	    是
-w 	    只能写 	        创建 	    是
-w+　 	可读可写 	    创建 	    是
-a　　 	只能写 	        创建 	    否，追加写
-a+ 	    可读可写 	    创建 	    否，追加写
-
-'''
+        return self._dir, self.dir
