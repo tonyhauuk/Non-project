@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-class Tech315:
+class Dy163:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -19,14 +19,14 @@ class Tech315:
         self.debug = True
 
     def crawl(self):
-        print('\n' ,'-' * 10, 'http://315tech.com/web/index', '-' * 10, '\n')
+        print('\n' ,'-' * 10, 'https://www.163.com/dy/media/', '-' * 10, '\n')
 
         self.browser = webdriver.Firefox()
         self.browser.set_window_position(x = 650, y = 0)
 
         i = self.total = 0
         status = True
-        file = '315_weblist.txt'
+        file = './163_dy.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
@@ -40,7 +40,6 @@ class Tech315:
         print('quantity: ', self.total)
         if status:
             if i > 0:
-                # self.deleteFiles()
                 return 'complete', self.source, 'ok'
             else:
                 return 'complete', 'none', 'ok'
@@ -55,28 +54,14 @@ class Tech315:
         except TimeoutException:
             return -1
 
-        while True:
-            newsList = self.browser.find_elements_by_css_selector('div.list > ul > li')
-            length = len(newsList)
+        newsList = self.browser.find_elements_by_css_selector('li.media_article')
+        for item in newsList:
+            dateTime = item.find_element_by_css_selector('p.media_article_date').text
 
-            for i in range(length):
-                item = self.browser.find_elements_by_css_selector('div.list > ul > li')[i]
-                dateTime = item.find_element_by_css_selector('div.media-body > h6').text
-
-                if self.date.split(' ')[0] in dateTime:
-                    self.extract(item)
-                else:
-                    break
-
-            if self.i < length:  # 如果当前采集的数量小于当前页的条数，就不翻页了
-                break
+            if dateTime.split(' ')[0] in self.date:
+                self.extract(item)
             else:
-                try:
-                    self.browser.find_element_by_partial_link_text('下一页').click()  # 点击下一页
-                    self.i = 0
-                except NoSuchElementException:
-                    break
-
+                break
 
         if self.i > 0:
             # self.rename()
@@ -89,7 +74,7 @@ class Tech315:
 
     # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_css_selector('h3 > a')
+        titleInfo = item.find_element_by_css_selector('h2.media_article_title > a')
 
         try:
             href = titleInfo.get_attribute('href')
@@ -105,23 +90,29 @@ class Tech315:
 
             title = titleInfo.text
 
-
+            handle = self.browser.current_window_handle  # 拿到当前页面的handle
             titleInfo.click()
-            sleep(2)
-            # self.source = self.getPageText()
-            self.browser.back()
 
+            # switch tab window
+            WebDriverWait(self.browser, 10).until(EC.number_of_windows_to_be(2))
+            handles = self.browser.window_handles
+            for newHandle in handles:
+                if newHandle != handle:
+                    self.browser.switch_to.window(newHandle)    # 切换到新标签
+                    sleep(2)                                    # 等个几秒钟
+                    self.source = self.getPageText()            # 拿到网页源码
+                    self.browser.close()                        # 关闭当前标签页
+                    self.browser.switch_to.window(handle)       # 切换到之前的标签页
+                    break
             print(href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 1165892)
-        except (NoSuchElementException, NoSuchAttributeException) as e:
-            print('Element error:', e)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 1160555)
         except Exception:
             return
 
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('div.bd > div.content').get_attribute('innerHTML')
+            html = self.browser.find_element_by_css_selector('div.post_body').get_attribute('innerHTML')
         except NoSuchElementException:
             html = self.browser.page_source
 
@@ -195,5 +186,5 @@ class Tech315:
 
 
 if __name__ == '__main__':
-    sc = Tech315({})
+    sc = Dy163({})
     sc.crawl()

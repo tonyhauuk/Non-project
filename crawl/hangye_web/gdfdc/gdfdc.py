@@ -40,7 +40,6 @@ class Gdfdc:
 
         if status:
             if i > 0:
-                self.deleteFiles()
                 return 'complete', self.source, 'ok'
             else:
                 return 'complete', 'none', 'ok'
@@ -52,29 +51,21 @@ class Gdfdc:
         self.i = 0
         try:
             self.browser.get(url)
+            sleep(2)
+            self.browser.find_element_by_xpath('/html/body').send_keys(Keys.END)
+            sleep(1)
         except TimeoutException:
             return -1
 
-        while True:
-            newsList = self.browser.find_elements_by_css_selector('div.invitation_mid > div > dl')
-            for i in range(len(newsList)):
-                item = self.browser.find_elements_by_css_selector('div.invitation_mid > div > dl')[i]
-                dateTime = item.find_element_by_css_selector('dd.black').text
+        newsList = self.browser.find_elements_by_css_selector('div.nf-column-list > div')
+        for i in range(len(newsList)):
+            item = self.browser.find_elements_by_css_selector('div.nf-column-list > div')[i]
+            dateTime = item.find_element_by_css_selector('div.content-time > p').text
 
-
-                if dateTime.split(' ')[0] in self.date:
-                    self.extract(item)
-                else:
-                    break
-
-            if self.i < len(newsList):  # 如果当前采集的数量小于当前页的条数，就不翻页了
-                break
+            if '前' in dateTime:
+                self.extract(item)
             else:
-                try:
-                    self.browser.find_element_by_partial_link_text('下一页').click()  # 点击下一页
-                    self.i = 0
-                except NoSuchElementException:
-                    break
+                break
 
 
 
@@ -89,9 +80,8 @@ class Gdfdc:
 
     # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_css_selector('dd.blue > a')
-
         try:
+            titleInfo = item.find_element_by_css_selector('div.nf-colum-list-content-top > p > a.h1title')
             href = titleInfo.get_attribute('href')
             md5 = self.makeMD5(href)
 
@@ -103,24 +93,23 @@ class Gdfdc:
                 self.i += 1
                 self.total += 1
 
-            title = titleInfo.text.replace('>>', '')
+            title = titleInfo.text
+            item.find_element_by_css_selector('div.nf-colum-list-content-top > p').click()
+            print(self.i, '---', title)
+            self.source = self.getPageText()
 
-            titleInfo.click()
-
-
-            print(href, title)
             # self.write_new_file(href, title, self.source, self.i, self.date, 112812)
+            sleep(2)
             self.browser.back()
             sleep(2)
-        except (NoSuchElementException, NoSuchAttributeException) as e:
-            print('Element error:', e)
-        except Exception:
+        except IndexError as e:
+            print(e)
             return
 
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('div.con').get_attribute('innerHTML')
+            html = self.browser.find_element_by_css_selector('div.article-content').get_attribute('innerHTML')
         except NoSuchElementException:
             html = self.browser.page_source
 
@@ -195,6 +184,7 @@ class Gdfdc:
     def getTime(self, dateTime):
         t = dateTime.replace('[', '')
         t = t.replace(']', '')
+        t = t.strip()
 
         return t
 

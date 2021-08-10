@@ -54,10 +54,17 @@ class Huichang_gov:
         except TimeoutException:
             return -1
 
+        if 'hcxrmzfyyh' in url:
+            newsCss = 'div.pageList > ul > li'
+            timeCss = 'span.time'
+        elif 'hcxxxgk' in url:
+            newsCss = 'ul.pageList.newsList > li'
+            timeCss = 'span.time'
+
         while True:
-            newsList = self.browser.find_elements_by_css_selector('div.zt_list_body_count > div.zt_list_body_count_div_list')
+            newsList = self.browser.find_elements_by_css_selector(newsCss)
             for item in newsList:
-                dateTime = item.find_element_by_css_selector('div.zt_list_body_count_div_time').text
+                dateTime = item.find_element_by_css_selector(timeCss).text
                 if dateTime in self.date:
                     self.extract(item)
                 else:
@@ -67,7 +74,7 @@ class Huichang_gov:
                 break
             else:
                 try:
-                    self.browser.find_element_by_css_selector('td > a.lucidity_pgBtn.lucidity_pgNext').click()  # 点击下一页
+                    self.browser.find_element_by_partial_link_text('下一页').click()  # 点击下一页
                     self.i = 0
                 except NoSuchElementException:
                     break
@@ -99,10 +106,10 @@ class Huichang_gov:
                 self.i += 1
                 self.total += 1
 
-            title = titleInfo.find_element_by_css_selector('div.zt_list_body_count_div_title').text
+            title = titleInfo.text
 
             handle = self.browser.current_window_handle  # 拿到当前页面的handle
-            titleInfo.find_element_by_tag_name('div').click()
+            titleInfo.click()
 
             # switch tab window
             WebDriverWait(self.browser, 10).until(EC.number_of_windows_to_be(2))
@@ -125,7 +132,7 @@ class Huichang_gov:
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('div#zoom').get_attribute('innerHTML')
+            html = self.browser.find_element_by_css_selector('div#zoomcon').get_attribute('innerHTML')
         except NoSuchElementException:
              html = self.browser.page_source
 

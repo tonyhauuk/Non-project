@@ -22,7 +22,7 @@ class XinhuaNews:
 
 
     def crawl(self):
-        print('\n', '-' * 10, 'http://chanye.cwan.com/', '-' * 10, '\n')
+        print('\n', '-' * 10, 'http://www.news.cn/', '-' * 10, '\n')
         self.i = self.total = 0
         self.browser = webdriver.Firefox()
         self.browser.set_window_position(x = 630, y = 0)
@@ -39,9 +39,9 @@ class XinhuaNews:
                 break
 
 
-            newsList = self.browser.find_elements_by_css_selector('div#list > ul.xpage-content > li')
+            newsList = self.browser.find_elements_by_css_selector('div#content-list > div.item')
             for item in newsList:
-                dateTime = item.find_element_by_css_selector('div.time').text
+                dateTime = item.find_element_by_css_selector('div.txt > div.info.clearfix.domPc > div.time').text
 
                 if dateTime in self.date:
                     self.extract(item)
@@ -66,7 +66,7 @@ class XinhuaNews:
     # 提取信息，一条的
     def extract(self, item):
         try:
-            titleInfo = item.find_element_by_css_selector('div.tit > a')
+            titleInfo = item.find_element_by_css_selector('div.txt > div.tit > a')
             href = titleInfo.get_attribute('href')
             md5 = self.makeMD5(href)
 

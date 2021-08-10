@@ -86,7 +86,7 @@ class Guangping_gov:
                 break
             else:
                 try:
-                    self.browser.find_element_by_name('下一页').click()  # 点击下一页
+                    self.browser.find_element_by_partial_link_text('下一页').click()  # 点击下一页
                     self.i = 0
                 except NoSuchElementException:
                     break

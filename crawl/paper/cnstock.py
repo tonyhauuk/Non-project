@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-class Jlwb:
+class Cnstock:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -25,17 +25,16 @@ class Jlwb:
         self.i = 0
 
         try:
-            self.browser.get('http://jlwb.njnews.cn')
+            self.browser.get('https://paper.cnstock.com/')
+            sleep(5)
         except TimeoutException:
-            return 'interrupt', 'none', 'error'
+            return
 
-        sleep(5)
-        self.browser.find_elements_by_css_selector('div.head > div.menu > a')[1].click()
-
-        newsList = self.browser.find_elements_by_css_selector('div.list > a')
+        newsList = self.browser.find_elements_by_css_selector('div#nlist > ul > li')
         for i in range(len(newsList)):
-            info = self.browser.find_elements_by_css_selector('div.list > a')[i]
-            href = info.get_attribute('href')
+            info = self.browser.find_elements_by_css_selector('div#nlist > ul > li')[i]
+            titleInfo = info.find_element_by_tag_name('a')
+            href = titleInfo.get_attribute('href')
 
             md5 = self.makeMD5(href)
             # dict filter
@@ -44,7 +43,7 @@ class Jlwb:
             else:
                 self.d[md5] = self.date.split(' ')[0]  # 往dict里插入记录
                 self.i += 1
-                self.extract(info)
+                self.extract(titleInfo)
 
 
         if self.i > 0:
@@ -60,32 +59,20 @@ class Jlwb:
     def extract(self, info):
         try:
             title = info.text
-            self.browser.set_page_load_timeout(2)
-            self.browser.set_script_timeout(2)
-            try:
-                info.click()
-            except:
-                self.browser.execute_script('window.stop()')
+            info.click()
 
             if self.debug:
                 print('count:', self.i, ' --- ', title)
 
-            try:
-                img = self.browser.find_element_by_css_selector('div.coin-slider').get_attribute('innerHTML')
-            except:
-                img = self.browser.find_element_by_css_selector('div#coin-slider').get_attribute('innerHTML')
-
-            cnt = self.browser.find_element_by_css_selector('div.content').text
-            self.source = img + cnt
+            self.source = self.browser.find_element_by_css_selector('div#content_article').text
             href = self.browser.current_url
 
             # self.write_new_file(href, title, self.source, self.i, self.date, 414705)
+            sleep(2)
             self.browser.back()
             sleep(2)
-        except (NoSuchElementException, NoSuchAttributeException) as e:
+        except Exception as e:
             print('Element error:', e)
-
-        except Exception:
             return
 
 
@@ -153,5 +140,5 @@ class Jlwb:
 
 
 if __name__ == '__main__':
-    j = Jlwb({})
+    j = Cnstock({})
     j.crawl()

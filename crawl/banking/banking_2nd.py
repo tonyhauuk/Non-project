@@ -23,7 +23,7 @@ class Banking:
         print('\n' ,'-' * 10, 'www.cbirc.gov.cn', '-' * 10)
 
         self.browser = webdriver.Firefox()
-        self.browser.set_window_position(x = 680, y = 0)
+        self.browser.set_window_position(x = 630, y = 0)
         self.total = 0
         i = 0
         status = True
@@ -51,8 +51,6 @@ class Banking:
 
     def doCrawl(self, url):
         itemName = self.getItemName(url)
-        self.browser = webdriver.Firefox()
-        self.browser.set_window_position(x = 680, y = 0)
         self.i = 0
         try:
             self.browser.get(url)

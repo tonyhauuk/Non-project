@@ -26,7 +26,7 @@ class Shanxi_gov:
         self.total = 0
         i = 0
         status = True
-        file = './shanxi_gxt_weblist.txt.txt'
+        file = './shanxi_gxt_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:

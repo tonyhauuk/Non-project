@@ -31,7 +31,7 @@ class Yz:
 
         sleep(3)
 
-        self.browser.find_element_by_css_selector('div.newsside > ul > li.oneclick1 > a')
+        self.browser.find_element_by_css_selector('div.newsside > ul > li.oneclick1 > a').click()
         sleep(2)
         getLoop = self.browser.find_elements_by_css_selector('div.Chunkiconlist > p')
 
