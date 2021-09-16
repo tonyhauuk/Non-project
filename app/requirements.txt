@@ -182,7 +182,7 @@ kaitaistruct==0.8
 kiwisolver==1.2.0
 kombu==4.6.8
 ldap3==2.7
-lxml==4.6.2
+lxml==4.6.3
 Markdown==3.2.1
 MarkupSafe==1.1.1
 matplotlib==3.2.1
@@ -316,7 +316,7 @@ kaitaistruct==0.8
 kiwisolver==1.2.0
 kombu==4.6.8
 ldap3==2.8.1
-lxml==4.6.2
+lxml==4.6.3
 Markdown==3.2.1
 MarkupSafe==1.1.1
 matplotlib==3.2.1
@@ -454,7 +454,7 @@ kaitaistruct==0.9
 kiwisolver==1.3.1
 kombu==5.0.2
 ldap3==2.9
-lxml==4.6.2
+lxml==4.6.3
 Markdown==3.3.4
 MarkupSafe==1.1.1
 matplotlib==3.3.4
@@ -594,7 +594,7 @@ kaitaistruct==0.9
 kiwisolver==1.3.1
 kombu==5.0.2
 ldap3==2.9
-lxml==4.6.2
+lxml==4.6.3
 Markdown==3.3.4
 MarkupSafe==1.1.1
 matplotlib==3.3.4
