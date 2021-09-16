@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import time, hashlib, os
+import time, hashlib, os, re
 from time import sleep
 from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
 from selenium import webdriver
@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-class Hbia:
+class Laoyaoba:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -18,15 +18,14 @@ class Hbia:
         self.dir = self._dir = ''
         self.debug = True
 
-    def crawl(self):
-        print('\n' ,'-' * 10, 'http://www.hbia.cn/', '-' * 10)
 
+    def crawl(self):
         self.browser = webdriver.Firefox()
-        self.browser.set_window_position(x = 650, y = 0)
+        self.browser.set_window_position(x = 630, y = 0)
 
         i = 0
         status = True
-        file = 'hbia_weblist.txt'
+        file = 'laoyaoba_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
@@ -39,7 +38,7 @@ class Hbia:
 
         if status:
             if i > 0:
-                self.deleteFiles()
+                # self.deleteFiles()
                 return 'complete', self.source, 'ok'
             else:
                 return 'complete', 'none', 'ok'
@@ -47,30 +46,26 @@ class Hbia:
             return 'interrupt', 'none', 'error'
 
 
+
     def doCrawl(self, url):
         self.i = 0
         try:
             self.browser.get(url)
+            sleep(2)
         except TimeoutException:
             return -1
 
-        newsList = self.browser.find_elements_by_xpath('/html/body/table[2]/tbody/tr/td[2]/table/tbody/tr/td/table/tbody/tr/td/table/tbody/tr')
-        print('len', len(newsList))
-        for i in range(len(newsList))[1:]:
-            newsItem = self.browser.find_elements_by_xpath('/html/body/table[2]/tbody/tr/td[2]/table/tbody/tr/td/table/tbody/tr/td/table/tbody/tr')[i]
-            try:
-                dateTime = newsItem.find_elements_by_tag_name('td')[2].text
-                if dateTime in self.date:
-                    item = newsItem.find_elements_by_tag_name('td')[1]
-                    self.extract(item)
-                else:
-                    break
-            except IndexError:
+        newsList = self.browser.find_elements_by_css_selector('ul#list-list > li')
+        for item in newsList:
+            dateTime = item.find_element_by_css_selector('section > div > div.list-content-intro-left > p').text
+            if '分钟前' in dateTime or '小时前' in dateTime:
+                self.extract(item)
+            else:
                 break
 
         if self.i > 0:
-            self.rename()
-            self.expire()
+            # self.rename()
+            # self.expire()
 
             return self.i
         else:
@@ -79,40 +74,50 @@ class Hbia:
 
     # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_tag_name('a')
-
         try:
+            titleInfo = item.find_element_by_css_selector('a.list-content-title')
             href = titleInfo.get_attribute('href')
             md5 = self.makeMD5(href)
 
+            # dict filter
             if md5 in self.d:
                 return
             else:
-                self.d[md5] = self.date.strip(' ')[0]  # 往dict里插入记录
+                self.d[md5] = self.date.split(' ')[0]  # 往dict里插入记录
                 self.i += 1
 
-            title = titleInfo.text
-            titleInfo.click()
-            self.source = self.getPageText()            # 拿到网页源码
-            self.browser.back()
+            title = titleInfo.find_element_by_css_selector('h1').text
 
-            # self.write_new_file(href, title, self.source, self.i, self.date)
-        except (NoSuchElementException, NoSuchAttributeException) as e:
-            print('Element error:', e)
-            self.i -= 1
+            handle = self.browser.current_window_handle  # 拿到当前页面的handle
+            titleInfo.click()
+
+            # switch tab window
+            WebDriverWait(self.browser, 10).until(EC.number_of_windows_to_be(2))
+            handles = self.browser.window_handles
+            for newHandle in handles:
+                if newHandle != handle:
+                    self.browser.switch_to.window(newHandle)    # 切换到新标签
+                    sleep(2)                                    # 等个几秒钟
+                    self.source, url = self.getPageText()       # 拿到网页源码
+                    self.browser.close()                        # 关闭当前标签页
+                    self.browser.switch_to.window(handle)       # 切换到之前的标签页
+                    break
+
+            print('count:', self.i, ' --- ', title)
+
+            # self.write_new_file(url, title, self.source, self.i, 1170191)
         except Exception:
-            self.i -= 1
             return
 
 
     def getPageText(self):  # 获取网页正文
+        url = self.browser.current_url
         try:
-            html = self.browser.find_element_by_css_selector('div#page_0').get_attribute('innerHTML')
+            html = self.browser.find_element_by_css_selector('section.article > article').get_attribute('innerHTML')
         except NoSuchElementException:
             html = self.browser.page_source
 
-
-        return html
+        return html, url
 
 
     # 生成md5信息
@@ -140,7 +145,7 @@ class Hbia:
 
         # 更新txt文件
         try:
-            fileName = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/hbia_md5.txt'
+            fileName = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/hbxw_md5.txt'
             os.remove(fileName)
             with open(fileName, 'a+') as f:
                 f.write(str(self.d))
@@ -160,29 +165,9 @@ class Hbia:
             pass
 
 
-    def deleteFiles(self):
-        filePath = '/root/estar_save/hbia_gov/'
-        timeStamp = time.time()
-        timeArray = time.localtime(timeStamp)
-        current = time.strftime("%Y-%m-%d", timeArray)
-        name = os.listdir(filePath)
-
-        for i in name:
-            try:
-                fileName = filePath + i
-                fileInfo = os.stat(fileName)
-            except FileNotFoundError:
-                continue
-            ts = fileInfo.st_mtime
-            timeArr = time.localtime(ts)
-            date = time.strftime("%Y-%m-%d", timeArr)
-            if current != date:
-                os.remove(fileName)
-
-
     def initDict(self):
         d = {}
-        file = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/hbia_md5.txt'
+        file = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/hbxw_md5.txt'
         try:
             with open(file, mode = 'r') as f:
                 line = f.readline()
@@ -199,5 +184,5 @@ class Hbia:
 
 
 if __name__ == '__main__':
-    hbia = Hbia({})
-    hbia.crawl()
+    i = Laoyaoba({})
+    i.crawl()

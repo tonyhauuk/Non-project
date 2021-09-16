@@ -170,7 +170,10 @@ class Baijiahao:
 
         try:
             html = self.browser.find_element_by_css_selector('div.index-module_articleWrap_2Zphx').get_attribute('innerHTML')
-        except:
+        except TimeoutException:
+            self.browser.execute_script('window.stop()')
+            html = self.browser.find_element_by_css_selector('div.index-module_articleWrap_2Zphx').get_attribute('innerHTML')
+        except NoSuchElementException:
             html = self.browser.page_source
 
         return html

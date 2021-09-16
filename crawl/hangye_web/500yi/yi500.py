@@ -9,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 #import crawlerfun
 
-class Chanye:
+class Yi500:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -22,20 +22,17 @@ class Chanye:
 
 
     def crawl(self):
-        print('\n', '-' * 10, 'http://chanye.cwan.com/', '-' * 10, '\n')
+        print('\n', '-' * 10, 'https://500yi.com/', '-' * 10, '\n')
         self.i = self.total = 0
         self.browser = webdriver.Firefox()
-        self.browser.set_window_position(x = 680, y = 0)
+        self.browser.set_window_position(x = 630, y = 0)
         n = 0
 
-        keywords = ['caijing', 'qiche', 'fangchan', 'shishang', 'lvyou', 'keji', 'it', 'yaowen', 'guonei', 'guoji', 'xinwen', 'bizdata', 'renwu', 'kc', 'kf', 'cy']
+        keywords = ['hongguan', 'gushi', 'jinrong', 'chanye', 'qukuanlian', 'chuangye', 'wenda', 'daanwang']
 
         for keyword in keywords:
             try:
-                if 'kc' == keyword or 'kf' == keyword or 'cy' == keyword:
-                    url = 'http://' + keyword + '.cwan.com'
-                else:
-                    url = 'http://chanye.cwan.com/' + keyword
+                url = 'https://500yi.com/' + keyword + '/'
 
                 self.browser.get(url)
             except TimeoutException:
@@ -43,16 +40,21 @@ class Chanye:
                 break
 
             while True:
-                newsList = self.browser.find_elements_by_css_selector('div.tap-body.list-a.list-art > dl')
-                for item in newsList:
-                    dateTime = item.find_element_by_css_selector('dd > label > span > span.format-time').text
+                newsList = self.browser.find_elements_by_css_selector('div.new-post > article')
+                length = len(newsList)
+                for i in range(length):
+                    item = newsList = self.browser.find_elements_by_css_selector('div.new-post > article')[i]
+                    try:
+                        dateTime = item.find_element_by_css_selector('time').text
+                    except:
+                        continue
 
-                    if dateTime.split(' ')[0] in self.date:
+                    if dateTime in self.date:
                         self.extract(item)
                     else:
                         break
 
-                if self.i < len(newsList):
+                if self.i < length:
                     break
                 else:
                     try:
@@ -79,7 +81,7 @@ class Chanye:
     # 提取信息，一条的
     def extract(self, item):
         try:
-            titleInfo = item.find_element_by_css_selector('dd > h2 > a')
+            titleInfo = item.find_element_by_css_selector('h2 > a')
             href = titleInfo.get_attribute('href')
             md5 = self.makeMD5(href)
 
@@ -91,35 +93,21 @@ class Chanye:
                 self.i += 1
                 self.total += 1
 
-
-            title = titleInfo.get_attribute('title')
-
-            handle = self.browser.current_window_handle  # 拿到当前页面的handle
+            title = titleInfo.text
             titleInfo.click()
-
-            # switch tab window
-            WebDriverWait(self.browser, 10).until(EC.number_of_windows_to_be(2))
-            handles = self.browser.window_handles
-            for newHandle in handles:
-                if newHandle != handle:
-                    self.browser.switch_to.window(newHandle)        # 切换到新标签
-                    sleep(1)                                        # 等个几秒钟
-                    self.source = self.getPageText()                # 拿到网页源码
-                    self.browser.close()                            # 关闭当前标签页
-                    self.browser.switch_to.window(handle)           # 切换到之前的标签页
-                    break
+            self.source = self.getPageText()                # 拿到网页源码
+            sleep(2)
+            self.browser.back()
 
             print(href, title)
             # self.write_new_file(href, title, self.source, self.i, self.date, 855436)
-        except (NoSuchElementException, NoSuchAttributeException) as e:
-            print('Element error:', e)
         except Exception:
             return
 
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('div.neirong').get_attribute('innerHTML')
+            html = self.browser.find_element_by_css_selector('div.art-content').get_attribute('innerHTML')
         except NoSuchElementException:
             html = self.browser.page_source
 
@@ -191,5 +179,5 @@ class Chanye:
 
 
 if __name__ == '__main__':
-    chanye = Chanye({})
-    chanye.crawl()
+    y = Yi500({})
+    y.crawl()

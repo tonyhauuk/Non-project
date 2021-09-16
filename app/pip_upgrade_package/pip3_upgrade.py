@@ -9,6 +9,8 @@ for dist in get_installed_distributions():
     print(dist.project_name)
 
 for dist in get_installed_distributions():
+    if 'pip' in dist.project_name:
+        continue
     num = 20
     print('-' * num)
     print('updating:', dist.project_name, '\t')

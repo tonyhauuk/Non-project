@@ -12,8 +12,6 @@ def delete_particular_file(top, prefix, suffix):
         match = prefix
         index = 0
 
-
-
     for root, dirs, files in os.walk(top, topdown = False):
         for file_name in files:
             # print(file_name.split('.')[index])

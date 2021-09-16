@@ -1,0 +1,4 @@
+http://www.fang99.com/zx/articleList.aspx
+http://www.fang99.com/wy/articleList.aspx?type=01
+http://www.fang99.com/wy/articleList.aspx?type=02
+http://www.fang99.com/wy/tsbgList.aspx
