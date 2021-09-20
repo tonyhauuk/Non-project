@@ -320,7 +320,7 @@ lxml==4.6.2
 Markdown==3.2.1
 MarkupSafe==1.1.1
 matplotlib==3.2.1
-mitmproxy==6.0.2
+mitmproxy==7.0.3
 monotonic==1.5
 msgpack==1.0.2
 numpy==1.18.4
@@ -458,7 +458,7 @@ lxml==4.6.2
 Markdown==3.3.4
 MarkupSafe==1.1.1
 matplotlib==3.3.4
-mitmproxy==6.0.2
+mitmproxy==7.0.3
 monotonic==1.5
 msgpack==1.0.2
 numpy==1.20.1
@@ -598,7 +598,7 @@ lxml==4.6.2
 Markdown==3.3.4
 MarkupSafe==1.1.1
 matplotlib==3.3.4
-mitmproxy==6.0.2
+mitmproxy==7.0.3
 monotonic==1.5
 msgpack==1.0.2
 numpy==1.20.1
