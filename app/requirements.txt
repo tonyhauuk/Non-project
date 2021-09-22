@@ -420,7 +420,7 @@ cryptography==3.4.6
 cssselect==1.1.0
 cycler==0.10.0
 dicttoxml==1.7.4
-Django==3.1.7
+Django==3.1.13
 dnspython==2.1.0
 docker-py==1.10.6
 docker-pycreds==0.4.0
@@ -560,7 +560,7 @@ cryptography==3.4.6
 cssselect==1.1.0
 cycler==0.10.0
 dicttoxml==1.7.4
-Django==3.1.7
+Django==3.1.13
 dnspython==2.1.0
 docker-py==1.10.6
 docker-pycreds==0.4.0
