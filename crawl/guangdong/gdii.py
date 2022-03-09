@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 
-import time, hashlib, os
+import time, datetime, re, hashlib, os, sys
 from time import sleep
 from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
 
 
-class Tianshui_gov:
+class Gdii_gov:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -19,14 +20,14 @@ class Tianshui_gov:
         self.debug = True
 
     def crawl(self):
-        print('\n' ,'-' * 10, 'http://www.tianshui.gov.cn/', '-' * 10)
+        print('\n' ,'-' * 10, 'http://gdii.gd.gov.cn/', '-' * 10, '\n')
 
         self.browser = webdriver.Firefox()
-        self.browser.set_window_position(x = 650, y = 0)
+        self.browser.set_window_position(x = 630, y = 0)
         self.total = 0
         i = 0
         status = True
-        file = './tianshui_gov_weblist.txt'
+        file = './gdii_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
@@ -50,25 +51,21 @@ class Tianshui_gov:
         self.i = 0
         try:
             self.browser.get(url)
+            sleep(3)
         except TimeoutException:
             return -1
 
         while True:
-            if 'A00040A00003' not in url:
-                newsList = self.browser.find_elements_by_css_selector('div.bt-mod-wzpb-03 > ul > li')
-                for item in newsList:
-                    dateTime = item.find_element_by_class_name('bt-data-time').text
-                    print(dateTime)
-                    if dateTime in self.date:
-                        self.extract(item)
-                    else:
-                        break
-            else:
-                newsList = self.browser.find_elements_by_css_selector('td#newslist_3505 > table > tbody > tr')
-                for item in newsList[1:]:
-                    dateTime = item.find_element_by_tag_name('font').text
-                    if dateTime in self.date:
-                        self.extract(item)
+            counter = 0
+            newsList = self.browser.find_elements(by = By.CSS_SELECTOR, value = 'ul.NewsList > li')
+            for item in newsList:
+                dateTime = item.find_element(by = By.CSS_SELECTOR, value = 'span').text
+                if dateTime in self.date:
+                    self.extract(item)
+                else:
+                    if 'tzgg1011' in url and counter == 0:
+                        counter += 1
+                        continue
                     else:
                         break
 
@@ -76,11 +73,10 @@ class Tianshui_gov:
                 break
             else:
                 try:
-                    self.browser.find_element_by_partial_link_text('下一页').click()  # 点击下一页
+                    self.browser.find_element(by = By.PARTIAL_LINK_TEXT, value = '下一页').click()  # 点击下一页
                     self.i = 0
                 except NoSuchElementException:
                     break
-
 
 
         if self.total > 0:
@@ -94,7 +90,7 @@ class Tianshui_gov:
 
     # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_tag_name('a')
+        titleInfo = item.find_element(by = By.TAG_NAME, value = 'a')
 
         try:
             href = titleInfo.get_attribute('href')
@@ -125,27 +121,16 @@ class Tianshui_gov:
                     self.browser.switch_to.window(handle)       # 切换到之前的标签页
                     break
             print(href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 15121)
-        except (NoSuchElementException, NoSuchAttributeException) as e:
-            print('Element error:', e)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 1165174)
         except Exception:
             return
 
 
     def getPageText(self):  # 获取网页正文
-        currentURL = self.browser.current_url
-        html = ''
         try:
-            if 'tianshui.gov.cn' in currentURL:
-                html = self.browser.find_element_by_css_selector('div.main-txt1').get_attribute('innerHTML')
-            elif 'gansu.gov.cn' in currentURL:
-                html = self.browser.find_element_by_css_selector('div#zoom').get_attribute('innerHTML')
-            elif 'www.gov.cn' in currentURL:
-                html = self.browser.find_element_by_css_selector('div.pages_content').get_attribute('innerHTML')
-
+            html = self.browser.find_element(by = By.CSS_SELECTOR, value = 'div#zoom').get_attribute('innerHTML')
         except NoSuchElementException:
             html = self.browser.page_source
-
 
         return html
 
@@ -216,5 +201,5 @@ class Tianshui_gov:
 
 
 if __name__ == '__main__':
-    ts = Tianshui_gov({})
-    ts.crawl()
+    y = Gdii_gov({})
+    y.crawl()

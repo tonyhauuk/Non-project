@@ -195,7 +195,7 @@ class MpWeixin:
     def getPageText(self):  # 获取网页正文
         # self.browser.set_page_load_timeout(2)
         # self.browser.set_script_timeout(2)
-        #
+
         # try:
         #     html = self.browser.find_element_by_css_selector('div#js_content').get_attribute('innerHTML')
         # except TimeoutException:
@@ -206,7 +206,7 @@ class MpWeixin:
 
         try:
             html = self.browser.find_element_by_css_selector('div#js_content').get_attribute('innerHTML')
-        except NoSuchElementException:
+        except NoSuchElementException as e:
             html = self.browser.page_source
 
         return html

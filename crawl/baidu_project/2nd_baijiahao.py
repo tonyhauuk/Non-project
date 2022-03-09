@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import time, datetime, re, hashlib, os, sys
+from datetime import datetime, date, timedelta
 from time import sleep
 from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
 from selenium import webdriver
@@ -8,6 +9,8 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 #import crawlerfun
+import warnings
+warnings.filterwarnings('ignore')
 
 class Baijiahao:
     def __init__(self, d):
@@ -23,12 +26,12 @@ class Baijiahao:
 
 
     def crawl(self):
-        print('\n', '-' * 10, 'http://chanye.cwan.com/', '-' * 10, '\n')
+        print('\n', '-' * 10, 'http://baijiahao.baidu.com/', '-' * 10, '\n')
         self.i = self.total = 0
         self.browser = webdriver.Firefox()
-        self.browser.set_window_position(x = 680, y = 0)
+        self.browser.set_window_position(x = 630, y = 0)
         n = 0
-        url = 'https://www.baidu.com/s?tn=news&rtt=4&bsst=1&cl=2&wd=%E4%B8%9C%E6%96%B9%E8%B4%A2%E5%AF%8C&medium=2'
+        url = 'https://www.baidu.com/s?tn=news&rtt=4&bsst=1&cl=2&wd=intel&medium=2'
         try:
             self.browser.get(url)
         except TimeoutException:
@@ -36,23 +39,30 @@ class Baijiahao:
 
         for i in range(10):
             newsList = self.browser.find_elements_by_css_selector('div > div.result-op.c-container.xpath-log.new-pmd')
-            if len(newsList) > 0:
-                for item in newsList:
-                    dateTime = item.find_element_by_css_selector('div.news-source > span.c-color-gray2.c-font-normal').text
-                    print('date time:', dateTime)
-                    if '小时前' in dateTime or '分钟前' in dateTime:
+            for item in newsList:
+                try:
+                    dateTime = item.find_element_by_css_selector('span.c-color-gray2.c-font-normal').text
+                except:
+                    continue
+
+                if '小时前' in dateTime or '分钟前' in dateTime or '秒前' in dateTime:
+                    self.extract(item)
+                elif '昨天' in dateTime:
+                    splitDate = dateTime.split('昨天')
+                    yesterday = (date.today() + timedelta(days = -1)).strftime("%Y-%m-%d")
+                    ft = yesterday + ' ' + splitDate[1]
+                    try:
+                        ts = self.calcDate(ft)
+                    except:
+                        continue
+                    oneDay = 60 * 60 * 24
+
+                    if self.timeStamp - ts < oneDay:
                         self.extract(item)
                     else:
-                        year = datetime.datetime.now().year
-                        splitDate = dateTime.split(str(year))
-                        fullTime = str(year) + splitDate[1]
-                        ts = self.calcDate(fullTime)
-                        oneDay = 60 * 60 * 24
-                        print('else time:', self.timeStamp - ts)
-                        if self.timeStamp - ts < oneDay:
-                            self.extract(item)
-                        else:
-                            break
+                        break
+                else:
+                    break
 
             if self.i < len(newsList):
                 break
@@ -69,7 +79,6 @@ class Baijiahao:
             if self.total > 0:
                 self.rename()
                 self.expire()
-                self.deleteFiles()
 
                 return 'complete', self.source, 'ok'
             else:
@@ -111,7 +120,7 @@ class Baijiahao:
                     self.browser.switch_to.window(handle)           # 切换到之前的标签页
                     break
 
-            print(href, title)
+            print(href, title, self.source[:50])
             # self.write_new_file(href, title, self.source, self.i, self.date, 1160102)
         except (NoSuchElementException, NoSuchAttributeException) as e:
             print('Element error:', e)
@@ -121,8 +130,8 @@ class Baijiahao:
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('div.article-content').get_attribute('innerHTML')
-        except NoSuchElementException:
+            html = self.browser.find_element_by_css_selector('div._2OVtLCRVVVa5RwDyfhipoy ').get_attribute('innerHTML')
+        except:
             html = self.browser.page_source
 
         return html

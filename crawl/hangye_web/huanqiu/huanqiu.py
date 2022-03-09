@@ -57,11 +57,12 @@ class Huanqiu:
         newsList = self.browser.find_elements_by_css_selector('ul#recommend > li')
         for item in newsList:
             dateTime = item.find_element_by_css_selector('span.time').text
-            print(dateTime)
+
             if dateTime.split(' ')[0] in self.date:
                 self.extract(item)
             else:
                 break
+
 
 
         if self.total > 0:

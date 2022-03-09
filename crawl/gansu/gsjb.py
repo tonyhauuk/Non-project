@@ -19,6 +19,7 @@ class Gsjb:
         self.dir = self._dir = self.source = ''
         # self.ipnum = crawlerfun.ip2num('61.130.181.229')
         self.debug = True
+        self.time = time.strftime('%Y/%m/%d', timeArray)
 
 
     def crawl(self):
@@ -41,8 +42,8 @@ class Gsjb:
             while True:
                 newsList = self.browser.find_elements_by_css_selector('span.cms_block_span > li')
                 for item in newsList:
-                    dateTime = item.find_element_by_tag_name('i').text
-                    if '20' + dateTime in self.date:    # 这个网站日期格式：20-05-27， 所以在前面加上20，拼接完整的日期格式
+                    dateTime = item.find_element_by_tag_name('a').get_attribute('href')
+                    if self.time in dateTime:
                         self.extract(item)
                     else:
                         break

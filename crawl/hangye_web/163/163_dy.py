@@ -22,7 +22,7 @@ class Dy163:
         print('\n' ,'-' * 10, 'https://www.163.com/dy/media/', '-' * 10, '\n')
 
         self.browser = webdriver.Firefox()
-        self.browser.set_window_position(x = 650, y = 0)
+        self.browser.set_window_position(x = 630, y = 0)
 
         i = self.total = 0
         status = True
@@ -57,7 +57,6 @@ class Dy163:
         newsList = self.browser.find_elements_by_css_selector('li.media_article')
         for item in newsList:
             dateTime = item.find_element_by_css_selector('p.media_article_date').text
-
             if dateTime.split(' ')[0] in self.date:
                 self.extract(item)
             else:

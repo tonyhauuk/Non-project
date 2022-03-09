@@ -75,8 +75,6 @@ class Xijiang:
                 except NoSuchElementException:
                     break
 
-
-
         if self.total > 0:
             crawlerfun.renameNew()
             crawlerfun.expire(self.date, self.d, self.projectName)

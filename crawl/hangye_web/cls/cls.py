@@ -31,7 +31,6 @@ class Cls:
             url = f.readlines()
             for x in url:
                 n = self.doCrawl(x)
-                break
                 if n == -1:
                     status = False
                     break
@@ -74,13 +73,11 @@ class Cls:
 
 
             newsList = self.browser.find_elements_by_css_selector(newsCss)
-            print('new len:',len(newsList))
             for item in newsList:
                 dateTime = item.find_element_by_css_selector(dateCss).text
                 self.dateTime = dateTime
 
                 self.extract(item)
-                continue
 
                 if 'depth' not in url:
                     if dateTime.split(' ')[0] in self.date:

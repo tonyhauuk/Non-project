@@ -7,9 +7,9 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+#import cralwerfun
 
-
-class Tianshui_gov:
+class Ynfzb:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -19,14 +19,15 @@ class Tianshui_gov:
         self.debug = True
 
     def crawl(self):
-        print('\n' ,'-' * 10, 'http://www.tianshui.gov.cn/', '-' * 10)
+        print('\n' ,'-' * 10, 'http://www.ynfzb.cn/', '-' * 10, '\n')
 
         self.browser = webdriver.Firefox()
-        self.browser.set_window_position(x = 650, y = 0)
+        self.browser.set_window_position(x = 630, y = 0)
+
         self.total = 0
         i = 0
         status = True
-        file = './tianshui_gov_weblist.txt'
+        file = './ynfzb_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
@@ -39,6 +40,7 @@ class Tianshui_gov:
 
         if status:
             if i > 0:
+                # self.deleteFiles()
                 return 'complete', self.source, 'ok'
             else:
                 return 'complete', 'none', 'ok'
@@ -53,24 +55,18 @@ class Tianshui_gov:
         except TimeoutException:
             return -1
 
+
         while True:
-            if 'A00040A00003' not in url:
-                newsList = self.browser.find_elements_by_css_selector('div.bt-mod-wzpb-03 > ul > li')
-                for item in newsList:
-                    dateTime = item.find_element_by_class_name('bt-data-time').text
-                    print(dateTime)
-                    if dateTime in self.date:
-                        self.extract(item)
-                    else:
-                        break
-            else:
-                newsList = self.browser.find_elements_by_css_selector('td#newslist_3505 > table > tbody > tr')
-                for item in newsList[1:]:
-                    dateTime = item.find_element_by_tag_name('font').text
-                    if dateTime in self.date:
-                        self.extract(item)
-                    else:
-                        break
+            newsList = self.browser.find_elements_by_css_selector('div.alist > ul > li')
+            for item in newsList:
+                dateTime = item.find_element_by_css_selector('span').text
+                dateTime = self.getTime(dateTime)
+                dateTime = '20' + dateTime
+
+                if dateTime in self.date:
+                    self.extract(item)
+                else:
+                    break
 
             if self.i < len(newsList):  # 如果当前采集的数量小于当前页的条数，就不翻页了
                 break
@@ -92,9 +88,11 @@ class Tianshui_gov:
             return 0
 
 
+
+
     # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_tag_name('a')
+        titleInfo = item.find_element_by_css_selector('a')
 
         try:
             href = titleInfo.get_attribute('href')
@@ -125,27 +123,16 @@ class Tianshui_gov:
                     self.browser.switch_to.window(handle)       # 切换到之前的标签页
                     break
             print(href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 15121)
-        except (NoSuchElementException, NoSuchAttributeException) as e:
-            print('Element error:', e)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 97624)
         except Exception:
             return
 
 
     def getPageText(self):  # 获取网页正文
-        currentURL = self.browser.current_url
-        html = ''
         try:
-            if 'tianshui.gov.cn' in currentURL:
-                html = self.browser.find_element_by_css_selector('div.main-txt1').get_attribute('innerHTML')
-            elif 'gansu.gov.cn' in currentURL:
-                html = self.browser.find_element_by_css_selector('div#zoom').get_attribute('innerHTML')
-            elif 'www.gov.cn' in currentURL:
-                html = self.browser.find_element_by_css_selector('div.pages_content').get_attribute('innerHTML')
-
+            html = self.browser.find_element_by_css_selector('div#DetCon').get_attribute('innerHTML')
         except NoSuchElementException:
             html = self.browser.page_source
-
 
         return html
 
@@ -175,13 +162,36 @@ class Tianshui_gov:
 
         # 更新txt文件
         try:
-            fileName = '/home/zran/src/crawler/31/manzhua/crawlpy3/record/sc_md5.txt'
+            fileName = '/home/zran/src/crawler/31/manzhua/crawlpy3/record/md5.txt'
             os.remove(fileName)
             with open(fileName, 'a+') as f:
                 f.write(str(self.d))
         except Exception as e:
             print(e)
 
+
+    def getTime(self, dateTime):
+        t = dateTime.replace('[', '')
+        t = t.replace(']', '')
+
+        if '年' in dateTime or '月' in dateTime or '日' in dateTime:
+            t = t.replace('年', '-')
+            t = t.replace('月', '-')
+            t = t.replace('日', '')
+
+        if '发布时间：' in dateTime:
+            t = t.replace('发布时间：', '')
+
+        if '.' in dateTime:
+            t = t.replace('.', '-')
+
+        if '(' in dateTime or ')' in dateTime:
+            t = t.replace('(', '')
+            t = t.replace(')', '')
+
+        t = t.strip()
+
+        return t
 
     # 重新修改文件夹名称
     def rename(self):
@@ -216,5 +226,5 @@ class Tianshui_gov:
 
 
 if __name__ == '__main__':
-    ts = Tianshui_gov({})
-    ts.crawl()
+    t = Ynfzb({})
+    t.crawl()
