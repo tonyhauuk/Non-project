@@ -50,7 +50,7 @@ def getverify1(name):
     return text
 
 
-getverify1('seccode.jpg')
+getverify1('ooo.jpg')
 
 
 def imageGrayscaleDeal(image):

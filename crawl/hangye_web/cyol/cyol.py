@@ -57,7 +57,7 @@ class Cyol:
                     self.extract()
                     try:
                         self.browser.find_element(by = By.PARTIAL_LINK_TEXT, value = '下一篇').click()
-                    except NoSuchElementException:
+                    except NoSuchElementExccomnewseption:
                         print('click return')
                         self.i = 0
                         self.browser.find_element(by = By.PARTIAL_LINK_TEXT, value = '返回目录').click()

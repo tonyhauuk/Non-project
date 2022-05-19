@@ -13,7 +13,9 @@ def eachFile(filepath):
         for i in range(len(fileList)):
             oldName = abPath + fileList[i]
             # new = fileList[i].replace(prefix[index], '')
-            new = re.sub(u'LRV', 'mp4', fileList[i])
+            if 'MP4' in oldName:
+                continue
+            new = re.sub(u'LRV', 'LRV.mp4', fileList[i])
             newName = abPath + new
             try:
                 os.rename(oldName, newName)

@@ -22,7 +22,7 @@ class Hebei_gxt_gov:
         print('\n' ,'-' * 10, 'http://gxt.hebei.gov.cn/hbgyhxxht/index/index.html', '-' * 10, '\n')
 
         self.browser = webdriver.Firefox()
-        self.browser.set_window_position(x = 650, y = 0)
+        self.browser.set_window_position(x = 630, y = 0)
         self.total = 0
         i = 0
         status = True
@@ -56,7 +56,7 @@ class Hebei_gxt_gov:
 
         while True:
             if 'fdzdgknr' not in url:
-                newsCss = 'div.ej-new-list > ul.clear > li'
+                newsCss = 'div.ej-new-list > ul > li'
             else:
                 newsCss = 'div > ul.xxgkList > li'
 
@@ -65,7 +65,7 @@ class Hebei_gxt_gov:
                 dateTime = item.find_element_by_tag_name('span').text
 
                 if dateTime in self.date:
-                    self.extract(item)
+                    self.extract(item, url)
                 else:
                     break
 
@@ -90,8 +90,11 @@ class Hebei_gxt_gov:
 
 
     # 提取信息，一条的
-    def extract(self, item):
-        titleInfo = item.find_element_by_css_selector('div > h1 > div > a')
+    def extract(self, item, url):
+        if 'fdzdgknr' not in url:
+            titleInfo = item.find_element_by_css_selector('a')
+        else:
+            titleInfo = item.find_element_by_css_selector('a:nth-child(2)')
 
         try:
             href = titleInfo.get_attribute('href')
@@ -105,7 +108,10 @@ class Hebei_gxt_gov:
                 self.i += 1
                 self.total += 1
 
-            title = titleInfo.text
+            if 'fdzdgknr' not in url:
+                title = titleInfo.text
+            else:
+                title = titleInfo.get_attribute('title')
 
             handle = self.browser.current_window_handle  # 拿到当前页面的handle
             titleInfo.click()
@@ -115,11 +121,11 @@ class Hebei_gxt_gov:
             handles = self.browser.window_handles
             for newHandle in handles:
                 if newHandle != handle:
-                    self.browser.switch_to.window(newHandle)    # 切换到新标签
-                    sleep(2)                                    # 等个几秒钟
-                    self.source = self.getPageText()            # 拿到网页源码
-                    self.browser.close()                        # 关闭当前标签页
-                    self.browser.switch_to.window(handle)       # 切换到之前的标签页
+                    self.browser.switch_to.window(newHandle)  # 切换到新标签
+                    sleep(2)  # 等个几秒钟
+                    self.source = self.getPageText()  # 拿到网页源码
+                    self.browser.close()  # 关闭当前标签页
+                    self.browser.switch_to.window(handle)  # 切换到之前的标签页
                     break
             print(href, title)
             # self.write_new_file(href, title, self.source, self.i, self.date, 1171059)
@@ -131,12 +137,9 @@ class Hebei_gxt_gov:
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('div#NewsContent').get_attribute('innerHTML')
-        except NoSuchElementException:
-            try:
-                html = self.browser.find_element_by_css_selector('div.zwxl-article').get_attribute('innerHTML')
-            except NoSuchElementException:
-                html = self.browser.page_source
+            html = self.browser.find_element_by_css_selector('div.gxt-xilan-content').get_attribute('innerHTML')
+        except:
+            html = self.browser.page_source
 
 
         return html

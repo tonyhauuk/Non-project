@@ -30,13 +30,13 @@ class Jjrb:
 
         while True:
             # 第一篇文章，必须要点开一次
-            first = self.browser.find_element_by_xpath('/html/body/table/tbody/tr[1]/td[2]/table[2]/tbody/tr/td[3]/table[4]/tbody/tr/td/div/table/tbody/tr[1]/td[2]/a')
-            self.extract(first, 1)
+            first = self.browser.find_element_by_css_selector('ul#articlelist > li')
+            self.extract(first)
 
-            otherList = self.browser.find_elements_by_xpath('//*[@id="content"]/table/tbody/tr[1]/td[1]/table/tbody/tr[1]/td/table[3]/tbody/tr/td[2]/table/tbody/tr[4]/td/div/table/tbody/tr')
+            otherList = self.browser.find_elements_by_css_selector('ul#articlelist > li')
             for i in range(1, len(otherList)):
-                item = self.browser.find_elements_by_xpath('//*[@id="content"]/table/tbody/tr[1]/td[1]/table/tbody/tr[1]/td/table[3]/tbody/tr/td[2]/table/tbody/tr[4]/td/div/table/tbody/tr')[i]
-                self.extract(item, 2)
+                item = self.browser.find_elements_by_css_selector('ul#articlelist > li')[i]
+                self.extract(item)
 
             try:
                 self.browser.find_element_by_partial_link_text('下一版').click()
@@ -59,15 +59,12 @@ class Jjrb:
 
 
     # 提取信息，一条的
-    def extract(self, info, count):
-        title = info.find_element_by_tag_name('div').text.strip()
+    def extract(self, info):
+        title = info.find_element_by_tag_name('a').text.strip()
         if title == '责编' or title == '本版责编':    # 如果标题是这两个，直接跳过不采集没用的信息
             return
 
-        if count == 1:
-            href = info.get_attribute('href')
-        elif count == 2:
-            href = info.find_element_by_xpath('td[2]/a').get_attribute('href')
+        href = info.find_element_by_tag_name('a').get_attribute('href')
 
         md5 = self.makeMD5(href)
 
@@ -79,10 +76,7 @@ class Jjrb:
             self.i += 1
 
 
-        if count == 1:
-            info.click()
-        else:
-            info.find_element_by_xpath('td[2]/a/div').click()
+        info.find_element_by_tag_name('p').click()
 
         self.source = self.getPageText()    # 拿到网页源码
         sleep(1)                            # 等个几秒钟

@@ -4,6 +4,7 @@ import time, hashlib, os
 from time import sleep
 from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
 from selenium import webdriver
+from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -30,10 +31,10 @@ class Cnstock:
         except TimeoutException:
             return
 
-        newsList = self.browser.find_elements_by_css_selector('div#nlist > ul > li')
+        newsList = self.browser.find_elements(by = By.CSS_SELECTOR, value = 'div.section > ul > li')
         for i in range(len(newsList)):
-            info = self.browser.find_elements_by_css_selector('div#nlist > ul > li')[i]
-            titleInfo = info.find_element_by_tag_name('a')
+            info = self.browser.find_elements(by = By.CSS_SELECTOR, value = 'div.section > ul > li')[i]
+            titleInfo = info.find_element(by = By.TAG_NAME, value = 'a')
             href = titleInfo.get_attribute('href')
 
             md5 = self.makeMD5(href)
@@ -64,7 +65,7 @@ class Cnstock:
             if self.debug:
                 print('count:', self.i, ' --- ', title)
 
-            self.source = self.browser.find_element_by_css_selector('div#content_article').text
+            self.source = self.browser.find_element(by = By.CSS_SELECTOR, value = 'div.content_article').text
             href = self.browser.current_url
 
             # self.write_new_file(href, title, self.source, self.i, self.date, 414705)

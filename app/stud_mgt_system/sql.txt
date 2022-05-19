@@ -1,0 +1,16 @@
+create database stud_sys;
+
+create table stud_info(
+   stud_id int not null auto_incerment,
+   stud_name VARCHAR(20) not null,
+   english_score int,
+   python_score int,
+   java_score int,
+   primary key ( stud_id )
+);
+
+insert into stud_info (stud_name, english_score, python_score, java_score) values ('tony', 100, 95, 99);
+
+update stud_info set python_score = 77 where stud_name = 'wong';
+
+delete from stud_info where name = 'heinz';
