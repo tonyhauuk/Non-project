@@ -416,7 +416,7 @@ click-plugins==1.1.1
 click-repl==0.1.6
 comtypes==1.1.8
 constantly==15.1.0
-cryptography==3.4.6
+cryptography==3.3.2
 cssselect==1.1.0
 cycler==0.10.0
 dicttoxml==1.7.4
@@ -556,7 +556,7 @@ click-plugins==1.1.1
 click-repl==0.1.6
 comtypes==1.1.8
 constantly==15.1.0
-cryptography==3.4.6
+cryptography==3.3.2
 cssselect==1.1.0
 cycler==0.10.0
 dicttoxml==1.7.4
