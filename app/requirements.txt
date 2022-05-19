@@ -514,7 +514,7 @@ sqlparse==0.4.1
 tornado==6.1
 tqdm==4.59.0
 tzlocal==2.1
-urllib3==1.25.11
+urllib3==1.26.5
 urwid==2.1.2
 vine==5.0.0
 w3lib==1.22.0
@@ -654,7 +654,7 @@ sqlparse==0.4.1
 tornado==6.1
 tqdm==4.59.0
 tzlocal==2.1
-urllib3==1.25.11
+urllib3==1.26.5
 urwid==2.1.2
 vine==5.0.0
 w3lib==1.22.0
