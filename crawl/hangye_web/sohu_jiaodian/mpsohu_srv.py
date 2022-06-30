@@ -8,26 +8,28 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+import crawlerfun
+
 
 class MpSohu:
-    def __init__(self, d):
+    def __init__(self, browser):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
         self.date = time.strftime('%Y-%m-%d %H:%M:%S', timeArray)
-        self.d = d
-        self.dir = self._dir = ''
+        self.projectName = 'mpsohu'
+        self.d = crawlerfun.initDict(self.projectName)
+        self.browser = browser
+        self.dir = self._dir = self.source = ''
+        self.ipnum = crawlerfun.ip2num('205.185.126.45')
         self.debug = True
 
     def crawl(self):
         print('\n' ,'-' * 10, 'http://mp.sohu.com', '-' * 10, '\n')
-
-        self.browser = webdriver.Firefox()
-        self.browser.set_window_position(x = 630, y = 0)
-
         self.total = 0
+
         i = 0
         status = True
-        file = 'mp_sohu_weblist.txt'
+        file = './record/mp_sohu_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
@@ -56,6 +58,8 @@ class MpSohu:
             sleep(5)
         except TimeoutException as e:
             print('timed out', e)
+            return -1
+            # self.browser.execute_script('window.stop ? window.stop() : documentCommand("Stop");')
 
         for _ in range(1):
             newsList = self.browser.find_elements(By.CSS_SELECTOR, 'div.recommend-content-wrap > div')
@@ -68,7 +72,6 @@ class MpSohu:
                 else:
                     break
 
-
             if self.i < len(newsList):  # 如果当前采集的数量小于当前页的条数，就不翻页了
                 break
             else:
@@ -79,17 +82,15 @@ class MpSohu:
                 except NoSuchElementException:
                     break
 
-
-
         if self.total > 0:
-            # self.rename()
-            # self.expire()
+            crawlerfun.renameNew()
+            crawlerfun.expire(self.date, self.d, self.projectName)
 
             return self.total
         else:
             return 0
 
-#div.recommend-content-wrap div.item-text-content div.item-text-content-title
+
 
     # 提取信息，一条的
     def extract(self, item):
@@ -100,7 +101,7 @@ class MpSohu:
 
         try:
             href = item.find_element(By.TAG_NAME, 'a').get_attribute('href')
-            md5 = self.makeMD5(href)
+            md5 = crawlerfun.makeMD5(href)
 
             # dict filter
             if md5 in self.d:
@@ -126,13 +127,14 @@ class MpSohu:
                     self.browser.close()                        # 关闭当前标签页
                     self.browser.switch_to.window(handle)       # 切换到之前的标签页
                     break
-            print(self.i, href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 12918)
+
+            self.write_new_file(href, title, self.source, self.i, self.date, 10003)
         except Exception as e:
             print('Element error:', e)
 
 
     def getPageText(self):  # 获取网页正文
+
         try:
             html = self.browser.find_element(By.CSS_SELECTOR, 'article#mp-editor').get_attribute('innerHTML')
         except NoSuchElementException:
@@ -142,71 +144,43 @@ class MpSohu:
         return html
 
 
-    # 生成md5信息
-    def makeMD5(self, link):
-        m = hashlib.md5()
-        b = link.encode(encoding = 'utf-8')
-        m.update(b)
-        enc = m.hexdigest()
+    def write_new_file(self, url, title, source, i, time, id):
+        content = '''
+                 <html>
+                     <head> 
+                        <meta charset="utf-8">
+                        <meta name="keywords" content="estarinfo">
+                        <title>''' + title + '''</title>
+                     </head> 
+                     <body>
+                         <h1 class="title">''' + title + '''</h1>
+                         <span class="time">''' + time + '''</span>
+                         <span class="source">''' + str(id) + '''</span>
+                         <div class="article">''' + source + '''</div>
+                     </body>
+                 </html>
+                 '''
+        page_text = url + '\n' + title + '\n' + str(id) + '\n\n\n\n' + content
 
-        return enc
+        if self.debug:
+            print('count:', self.i, ' --- ', title)
 
+        if '' == self._dir:
+            self.crawl_mkdir()
 
-    # 删除过期的记录
-    def expire(self):
-        # 检查过期数据
-        li = []
-        current = self.date.split(' ')[0]
-        for k, v in self.d.items():
-            if current != v:
-                li.append(k)
-
-        # 删除字典里过期的数据
-        for i in li:
-            self.d.pop(i)
-
-        # 更新txt文件
-        try:
-            fileName = '/home/zran/src/crawler/31/manzhua/crawlpy3/record/sc_md5.txt'
-            os.remove(fileName)
-            with open(fileName, 'a+') as f:
-                f.write(str(self.d))
-        except Exception as e:
-            print(e)
-
-
-    # 重新修改文件夹名称
-    def rename(self):
-        try:
-            root = '/estar/newhuike2/1/'
-            lst = os.listdir(root)
-            for l in lst:
-                if '_' in l:
-                    os.rename(root + l, root + l.strip('_'))
-        except:
-            pass
+        filename = self._dir + 'iask_' + str(i) + '_' + str(len(self.d)) + '.htm-2'
+        for num in range(2):
+            if 1 == crawlerfun.write_file(filename, page_text, ifdisplay = 0):
+                break
+            else:  # 有时目录会被c程序删掉
+                crawlerfun.mkdir(self._dir)
 
 
-    def deleteFiles(self):
-        filePath = '/root/estar_save/sc_gov/'
-        timeStamp = time.time()
-        timeArray = time.localtime(timeStamp)
-        current = time.strftime("%Y-%m-%d", timeArray)
-        name = os.listdir(filePath)
+    def crawl_mkdir(self):
+        dirroot = '/estar/newhuike2/1/'
+        tm_s, tm_millisecond = crawlerfun.get_timestamp(ifmillisecond = 1)
+        dirsmall = 'iask' + str(self.ipnum) + '.' + str(1) + '.' + str(tm_s) + '.' + str(tm_millisecond) + '/'
+        self._dir = dirroot + '_' + dirsmall
+        self.dir = dirroot + dirsmall
 
-        for i in name:
-            try:
-                fileName = filePath + i
-                fileInfo = os.stat(fileName)
-            except FileNotFoundError:
-                continue
-            ts = fileInfo.st_mtime
-            timeArr = time.localtime(ts)
-            date = time.strftime("%Y-%m-%d", timeArr)
-            if current != date:
-                os.remove(fileName)
-
-
-if __name__ == '__main__':
-    s = MpSohu({})
-    s.crawl()
+        return self._dir, self.dir

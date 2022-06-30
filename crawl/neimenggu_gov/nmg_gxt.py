@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import time, hashlib, os
+import time, datetime, re, hashlib, os, sys
 from time import sleep
 from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
 from selenium import webdriver
@@ -8,8 +8,11 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+# import crawlerfun
 
-class MpSohu:
+
+
+class Nmg_gxt:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -19,15 +22,14 @@ class MpSohu:
         self.debug = True
 
     def crawl(self):
-        print('\n' ,'-' * 10, 'http://mp.sohu.com', '-' * 10, '\n')
+        print('\n' ,'-' * 10, 'http://gxt.nmg.gov.cn/', '-' * 10, '\n')
 
         self.browser = webdriver.Firefox()
         self.browser.set_window_position(x = 630, y = 0)
-
         self.total = 0
         i = 0
         status = True
-        file = 'mp_sohu_weblist.txt'
+        file = 'nmg_gxt_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
@@ -38,7 +40,6 @@ class MpSohu:
                 else:
                     i += n
 
-        print('quantity: ', self.total, '\n')
         if status:
             if i > 0:
                 return 'complete', self.source, 'ok'
@@ -50,36 +51,27 @@ class MpSohu:
 
     def doCrawl(self, url):
         self.i = 0
-        count = 0
         try:
             self.browser.get(url)
-            sleep(5)
-        except TimeoutException as e:
-            print('timed out', e)
+            sleep(2)
+        except TimeoutException:
+            return -1
 
-        for _ in range(1):
-            newsList = self.browser.find_elements(By.CSS_SELECTOR, 'div.recommend-content-wrap > div')
+        if 'zwgk' in url:
+            newsCss = 'table#table1 > tbody > tr'
+            dateCss = 'td:nth-child(3)'
+        else:
+            newsCss = 'div.list_03 > ul > li'
+            dateCss = 'span.date'
 
-            for item in newsList[count:len(newsList)]:
-                dateTime = item.find_element(By.CSS_SELECTOR, 'span.extra-info-item').text
-
-                if '天' not in dateTime:
-                    self.extract(item)
-                else:
-                    break
-
-
-            if self.i < len(newsList):  # 如果当前采集的数量小于当前页的条数，就不翻页了
-                break
+        newsList = self.browser.find_elements(by = By.CSS_SELECTOR, value = newsCss)
+        for i in range(len(newsList)):
+            item = self.browser.find_elements(by = By.CSS_SELECTOR, value = newsCss)[i]
+            dateTime = item.find_element(by = By.CSS_SELECTOR, value = dateCss).text
+            if dateTime in self.date:
+                self.extract(item, url)
             else:
-                try:
-                    self.browser.find_element(By.XPATH, '/html').send_keys(Keys.END)  # 往下拉，继续加载
-                    # self.i = 0
-                    count = self.i + 1
-                except NoSuchElementException:
-                    break
-
-
+                break
 
         if self.total > 0:
             # self.rename()
@@ -89,17 +81,13 @@ class MpSohu:
         else:
             return 0
 
-#div.recommend-content-wrap div.item-text-content div.item-text-content-title
 
     # 提取信息，一条的
-    def extract(self, item):
-        try:
-            titleInfo = item.find_element(By.CSS_SELECTOR, 'div.item-text-content div.item-text-content-title')
-        except:
-            titleInfo = item.find_element(By.CSS_SELECTOR, 'div.VideoFeedItem div.title')
+    def extract(self, item, url):
+        titleInfo = item.find_element(by = By.CSS_SELECTOR, value = 'a')
 
         try:
-            href = item.find_element(By.TAG_NAME, 'a').get_attribute('href')
+            href = titleInfo.get_attribute('href')
             md5 = self.makeMD5(href)
 
             # dict filter
@@ -112,29 +100,37 @@ class MpSohu:
 
             title = titleInfo.text
 
-            handle = self.browser.current_window_handle  # 拿到当前页面的handle
-            titleInfo.click()
+            if 'zwgk' in url:
+                handle = self.browser.current_window_handle  # 拿到当前页面的handle
+                titleInfo.click()
 
-            # switch tab window
-            WebDriverWait(self.browser, 10).until(EC.number_of_windows_to_be(2))
-            handles = self.browser.window_handles
-            for newHandle in handles:
-                if newHandle != handle:
-                    self.browser.switch_to.window(newHandle)    # 切换到新标签
-                    sleep(2)                                    # 等个几秒钟
-                    self.source = self.getPageText()            # 拿到网页源码
-                    self.browser.close()                        # 关闭当前标签页
-                    self.browser.switch_to.window(handle)       # 切换到之前的标签页
-                    break
-            print(self.i, href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 12918)
+                # switch tab window
+                WebDriverWait(self.browser, 10).until(EC.number_of_windows_to_be(2))
+                handles = self.browser.window_handles
+                for newHandle in handles:
+                    if newHandle != handle:
+                        self.browser.switch_to.window(newHandle)    # 切换到新标签
+                        sleep(2)                                    # 等个几秒钟
+                        self.source = self.getPageText()            # 拿到网页源码
+                        self.browser.close()                        # 关闭当前标签页
+                        self.browser.switch_to.window(handle)       # 切换到之前的标签页
+                        break
+            else:
+                titleInfo.click()
+                sleep(2)
+                self.source = self.getPageText()
+                self.browser.back()
+                sleep(1)
+
+            print(href, title)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 1164967)
         except Exception as e:
-            print('Element error:', e)
+            return
 
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element(By.CSS_SELECTOR, 'article#mp-editor').get_attribute('innerHTML')
+            html = self.browser.find_element(By.CSS_SELECTOR, 'div.view.TRS_UEDITOR.trs_paper_default.trs_word').get_attribute('innerHTML')
         except NoSuchElementException:
             html = self.browser.page_source
 
@@ -208,5 +204,5 @@ class MpSohu:
 
 
 if __name__ == '__main__':
-    s = MpSohu({})
-    s.crawl()
+    c = Nmg_gxt({})
+    c.crawl()
