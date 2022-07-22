@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 
-import time, hashlib, os
+import time, hashlib, os, datetime
 from time import sleep
 from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
 
 
-class Shanxi_gov:
+class Yuncheng_gxj_gov:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -17,16 +18,19 @@ class Shanxi_gov:
         self.d = d
         self.dir = self._dir = ''
         self.debug = True
+        self.day = time.strftime('%Y/%m/%d', timeArray)
+
 
     def crawl(self):
-        print('\n' ,'-' * 10, 'http://gxt.shanxi.gov.cn/', '-' * 10)
+        print('\n' ,'-' * 10, 'http://gxj.yuncheng.gov.cn/', '-' * 10, '\n')
 
         self.browser = webdriver.Firefox()
-        self.browser.set_window_position(x = 650, y = 0)
+        self.browser.set_window_position(x = 630, y = 0)
+
         self.total = 0
         i = 0
         status = True
-        file = './shanxi_gxt_weblist.txt'
+        file = './yuncheng_gxj_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
@@ -39,7 +43,6 @@ class Shanxi_gov:
 
         if status:
             if i > 0:
-                self.deleteFiles()
                 return 'complete', self.source, 'ok'
             else:
                 return 'complete', 'none', 'ok'
@@ -49,38 +52,36 @@ class Shanxi_gov:
 
     def doCrawl(self, url):
         self.i = 0
+
         try:
             self.browser.get(url)
+            sleep(2)
         except TimeoutException:
             return -1
 
-        iframe = self.browser.find_element_by_id('menuFrame')     # 定位iframe
-        self.browser.switch_to.frame(iframe)                    # 切换到iframe
+        if 'gzdt1' in url:
+            newsCss = 'div.tab_list > ul > li'
+            dateCss = 'span'
+        else:
+            newsCss = 'div.main_svxxgk > ul > li'
+            dateCss = 'span'
 
         while True:
-            i = 0
-            newsList = self.browser.find_elements_by_css_selector('div.list-right > ul.zwgk-ul > li')
+            newsList = self.browser.find_elements(By.CSS_SELECTOR, newsCss)
+            for item in newsList:
+                dateTime = item.find_elements(By.CSS_SELECTOR, dateCss)
 
-            for k in range(len(newsList)):
-                item = self.browser.find_elements_by_css_selector('div.list-right > ul.zwgk-ul > li')[k]
-                try:
-                    dateTime = item.find_element_by_tag_name('i').text
-                    i += 1
-                except NoSuchElementException:
-                    continue
-
-                if dateTime.split(' ')[0] in self.date:
+                if self.day in dateTime:
                     self.extract(item)
                 else:
                     break
 
-
-            if self.i < i:  # 如果当前采集的数量小于当前页的条数，就不翻页了
+            if self.i < len(newsList):
                 break
             else:
-                self.i = 0
                 try:
-                    self.browser.find_element_by_partial_link_text('下一页').click()  # 点击下一页
+                    self.browser.find_element(By.PARTIAL_LINK_TEXT, '下一页').click()
+                    self.i = 0
                 except NoSuchElementException:
                     break
 
@@ -93,10 +94,8 @@ class Shanxi_gov:
             return 0
 
 
-    # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_tag_name('a')
-
+        titleInfo = item.find_element(By.TAG_NAME, 'a')
         try:
             href = titleInfo.get_attribute('href')
             md5 = self.makeMD5(href)
@@ -119,26 +118,26 @@ class Shanxi_gov:
             handles = self.browser.window_handles
             for newHandle in handles:
                 if newHandle != handle:
-                    self.browser.switch_to.window(newHandle)    # 切换到新标签
-                    sleep(2)                                    # 等个几秒钟
-                    self.source = self.getPageText()            # 拿到网页源码
-                    self.browser.close()                        # 关闭当前标签页
-                    self.browser.switch_to.window(handle)       # 切换到之前的标签页
+                    self.browser.switch_to.window(newHandle)        # 切换到新标签
+                    sleep(2)                                        # 等个几秒钟
+                    self.source = self.getPageText()                # 拿到网页源码
+                    self.browser.close()                            # 关闭当前标签页
+                    self.browser.switch_to.window(handle)           # 切换到之前的标签页
                     break
-
             print(href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 1165050)
-        except (NoSuchElementException, NoSuchAttributeException) as e:
-            print('Element error:', e)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 1165054)
         except Exception:
             return
 
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('div.textbody').get_attribute('innerHTML')
+            html = self.browser.find_element(By.CSS_SELECTOR, 'div#ltext').get_attribute('innerHTML')
         except NoSuchElementException:
-            html = self.browser.page_source
+            try:
+                html = self.browser.find_element(By.CSS_SELECTOR, 'div#info_content').get_attribute('innerHTML')
+            except NoSuchElementException:
+                html = self.browser.page_source
 
         return html
 
@@ -168,7 +167,7 @@ class Shanxi_gov:
 
         # 更新txt文件
         try:
-            fileName = '/home/zran/src/crawler/33/manzhua/crawlpy3/record/cq_md5.txt'
+            fileName = '/home/zran/src/crawler/31/manzhua/crawlpy3/record/sc_md5.txt'
             os.remove(fileName)
             with open(fileName, 'a+') as f:
                 f.write(str(self.d))
@@ -189,7 +188,7 @@ class Shanxi_gov:
 
 
     def deleteFiles(self):
-        filePath = '/root/estar_save/cq_gov/'
+        filePath = '/root/estar_save/sc_gov/'
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
         current = time.strftime("%Y-%m-%d", timeArray)
@@ -209,5 +208,5 @@ class Shanxi_gov:
 
 
 if __name__ == '__main__':
-    cq = Shanxi_gov({})
-    cq.crawl()
+    g = Yuncheng_gxj_gov({})
+    g.crawl()

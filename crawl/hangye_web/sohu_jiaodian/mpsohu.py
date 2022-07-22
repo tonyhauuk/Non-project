@@ -22,6 +22,7 @@ class MpSohu:
         print('\n' ,'-' * 10, 'http://mp.sohu.com', '-' * 10, '\n')
 
         self.browser = webdriver.Firefox()
+
         self.browser.set_window_position(x = 630, y = 0)
 
         self.total = 0
@@ -63,7 +64,7 @@ class MpSohu:
             for item in newsList[count:len(newsList)]:
                 dateTime = item.find_element(By.CSS_SELECTOR, 'span.extra-info-item').text
 
-                if '天' not in dateTime:
+                if '分钟'  in dateTime:
                     self.extract(item)
                 else:
                     break
