@@ -10,7 +10,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from apscheduler.schedulers.blocking import BlockingScheduler
-from selenium.webdriver.opera.options import Options as operaOptions
+# from selenium.webdriver.opera.options import Options as operaOptions
 
 sys.path.append('..')
 import crawlerfun
@@ -42,32 +42,33 @@ class MpWeixin:
                     self.doCrawl(key, value.get('nickname'))
 
 
+
     def doCrawl(self, key, nickname):
         self.i = 0
         try:
             url = 'https://weixin.sogou.com/weixin?type=1&query=' + nickname + '&ie=utf8&s_from=input&_sug_=y&_sug_type_='
             self.browser.get(url)
-            sleep(3)
 
-            if 'antispider' in browser.current_url:     # 检查是否被ban
+            if 'antispider' in self.browser.current_url:  # 检查是否被ban
                 self.checkBanned()
 
             try:
-                self.browser.find_element_by_css_selector('div.b404-box > div.text-info')  # 公众号没有文章
+                self.browser.find_element(by = By.CSS_SELECTOR, value = 'div.b404-box > div.text-info')  # 公众号没有文章
                 self.recordNone(key, nickname)
                 return
             except NoSuchElementException:
                 pass
 
             print('\n' + key + ': ' + nickname)
-        except Exception:
+        except Exception as e:
+            print(e)
             return
 
         while True:
-            newsList = self.browser.find_elements_by_css_selector('div.news-box > ul.news-list2 > li')
+            newsList = self.browser.find_elements(by = By.CSS_SELECTOR, value = 'div.news-box > ul.news-list2 > li')
             for item in newsList:
                 try:
-                    dateTime = item.find_element_by_css_selector('dl:last-child > dd > span').text
+                    dateTime = item.find_element(by = By.CSS_SELECTOR, value = 'dl:last-child > dd > span').text
                 except NoSuchElementException:
                     continue
 
@@ -78,7 +79,7 @@ class MpWeixin:
 
             if self.pageNum > 0:
                 try:
-                    self.browser.find_element_by_partial_link_text('下一页').click()
+                    self.browser.find_element(by = By.PARTIAL_LINK_TEXT, value = '下一页').click()
                 except NoSuchElementException:
                     break
             elif self.pageNum == 0:
@@ -94,7 +95,7 @@ class MpWeixin:
 
     # 提取信息，一条的
     def extract(self, item, nickname):
-        titleInfo = item.find_element_by_css_selector('dd > a')
+        titleInfo = item.find_element(by = By.CSS_SELECTOR, value = 'dd > a')
         title = titleInfo.text
         tag = title + '|' + nickname
         try:
@@ -141,9 +142,9 @@ class MpWeixin:
 
 
     def bottomNews(self, browser, handle):
-        self.browser.find_element_by_xpath('/html/body').send_keys(Keys.END)
+        self.browser.find_elements(by = By.XPATH, value = '/html/body').send_keys(Keys.END)
         current = int(time.time())
-        newsList = browser.find_elements_by_css_selector('a.weui-media-box.weui-media-box_appmsg.js_related_item')
+        newsList = browser.find_elements(by = By.CSS_SELECTOR, value = 'a.weui-media-box.weui-media-box_appmsg.js_related_item')
         for item in newsList:
             try:
                 dateTime = int(item.get_attribute('data-time'))
@@ -155,11 +156,9 @@ class MpWeixin:
             else:
                 continue
 
-        sleep(1)
-
 
     def extractSingle(self, item, firstHandle):
-        titleInfo = item.find_element_by_css_selector('div > div.weui_ellipsis_mod_inner')
+        titleInfo = item.find_element(by = By.CSS_SELECTOR, value = 'div > div.weui_ellipsis_mod_inner')
         title = titleInfo.text
         try:
             # href = item.get_attribute('data-url')
@@ -200,7 +199,7 @@ class MpWeixin:
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('div#js_content').get_attribute('innerHTML')
+            html = self.browser.find_element(by = By.CSS_SELECTOR, value = 'div#js_content').get_attribute('innerHTML')
         except NoSuchElementException:
             html = self.browser.page_source
 
@@ -264,30 +263,32 @@ class MpWeixin:
     def checkBanned(self):
         imgFile = 'codeImage.png'
         for i in range(5):
-            if i > 0:
-                if 'antispider' in browser.current_url:
-                    browser.find_element(by = By.CSS_SELECTOR, value = 'a#change-img').click()  # 点击换一张
+            if 'antispider' in self.browser.current_url:
+                if i > 0:
+                    self.browser.find_element(by = By.CSS_SELECTOR, value = 'a#change-img').click()  # 点击换一张
                     sleep(2)
 
-                    browser.execute_script('document.body.style.zoom="0.8"')
-                    verify = browser.find_element(by = By.CSS_SELECTOR, value = 'img#seccodeImage')
-                    verify.screenshot(imgFile)
+                # self.browser.execute_script('document.body.style.zoom="0.8"')
+                verify = self.browser.find_element(by = By.CSS_SELECTOR, value = 'img#seccodeImage')
+                verify.screenshot(imgFile)
 
-                    ocr = ddddocr.DdddOcr(show_ad = False)
+                ocr = ddddocr.DdddOcr(show_ad = False)
 
-                    with open(imgFile, 'rb') as f:
-                        byte = f.read()
+                with open(imgFile, 'rb') as f:
+                    byte = f.read()
 
-                    res = ocr.classification(byte)
-                    print('Submit verify code times:', i, '. The Code: ' + res + '\n')
+                res = ocr.classification(byte)
+                print('Verify code times:', i + 1, '. The Code: ' + res + '\n')
+                os.remove(imgFile)
 
-                    os.remove(imgFile)
+                self.browser.find_element(by = By.CSS_SELECTOR, value = 'input#seccodeInput').send_keys(res)  # 输入验证码
+                sleep(2)
+                # self.browser.find_element(by = By.CSS_SELECTOR, value = 'input#seccodeInput').send_keys(Keys.ENTER)
+                self.browser.find_element(by = By.CSS_SELECTOR, value = 'p.p5 > a#submit').click()  # 点击‘提交’按钮
+            else:
+                break
 
-                    browser.find_element(by = By.CSS_SELECTOR, value = 'input#seccodeInput').send_keys(res)  # 输入验证码
-                    sleep(2)
-                    browser.find_element(by = By.CSS_SELECTOR, value = 'a#submit').click()  # 点击‘提交’按钮
-                else:
-                    break
+
 
 
     def recordNone(self, key, nickname):
@@ -343,25 +344,34 @@ def startBrowser():
     # options.add_argument('--disable-gpu')
     # options.add_argument('--disable-logging')
     # options.add_argument("--disable-infobars")
-    # options.add_argument('user-agent="Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.103 Safari/537.36"')
+    # options.add_argument('--ignore-ssl-errors')
+    # options.add_argument('--disable-extensions')
+    # # options.add_argument('user-agent="Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.103 Safari/537.36"')
     # options.add_argument('--disk-cache-dir=%s' % '/dev/shm/cache')
-    # browser = webdriver.Chrome(chrome_options = options)
+    # # options.binary_location = '/usr/lib64/opera/opera'
+    # # browser = webdriver.Opera(options = options, executable_path = '/usr/bin/operadriver')
+    # browser = webdriver.Chrome(options = options)
     # browser.set_window_size(1135, 685)
     # browser.set_window_position(x = 225, y = 0)
-    # clean(browser)
 
-    options = operaOptions()
-    options.binary_location = '/usr/lib64/opera/opera'
-    options.add_argument('--disable-gpu')
+    options = webdriver.ChromeOptions()
     options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
     options.add_argument('--disable-logging')
-    options.add_argument('--disable-plugins')
-    options.add_argument('--disable-java')
-    browser = webdriver.Opera(options = options, executable_path = '/usr/bin/operadriver')
-    browser.set_window_size(1200, 685)
-    browser.set_window_position(x = 150, y = 0)
+    options.add_argument('--disable-javascript')
+    options.add_argument('--ignore-ssl-errors')
+    options.add_argument('--disable-extensions')
+    options.add_argument('--disable-dev-shm-usage')
+    options.add_argument('--ignore-certificate-errors')
+    options.add_argument('--disable-browser-side-navigation')
+    options.add_argument('--ignore-certificate-errors-spki-list')
 
+    # options.add_experimental_option('debuggerAddress', '127.0.0.1:8080')
+    # options.add_experimental_option('w3c', True)
+
+    options.binary_location = '/usr/lib64/opera/opera'
+    browser = webdriver.Opera(options = options, executable_path = '/usr/bin/operadriver')
+    browser.set_window_size(1000, 690)
+    browser.set_window_position(x = 100, y = 0)
 
     return browser
 

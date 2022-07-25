@@ -23,26 +23,27 @@ imgFile = 'codeImage.png'
 
 if 'antispider' in browser.current_url:
     for i in range(5):
-        if i > 0:
-            if 'antispider' in browser.current_url:
+
+        if 'antispider' in browser.current_url:
+            if i > 0:
                 browser.find_element(by = By.CSS_SELECTOR, value = 'a#change-img').click()      # 点击换一张
                 sleep(2)
 
-                browser.execute_script('document.body.style.zoom="0.8"')
-                verify = browser.find_element(by = By.CSS_SELECTOR, value = 'img#seccodeImage')
-                verify.screenshot(imgFile)
+            browser.execute_script('document.body.style.zoom="0.8"')
+            verify = browser.find_element(by = By.CSS_SELECTOR, value = 'img#seccodeImage')
+            verify.screenshot(imgFile)
 
-                ocr = ddddocr.DdddOcr(show_ad = False)
+            ocr = ddddocr.DdddOcr(show_ad = False)
 
-                with open(imgFile, 'rb') as f:
-                    byte = f.read()
+            with open(imgFile, 'rb') as f:
+                byte = f.read()
 
-                res = ocr.classification(byte)
-                print('Submit verify code times:', i, '. The Code: ' + res + '\n')
+            res = ocr.classification(byte)
+            print('Submit verify code times:', i + 1, '. The Code: ' + res + '\n')
 
-                os.remove(imgFile)
-                browser.find_element(by = By.CSS_SELECTOR, value = 'input#seccodeInput').send_keys(res) # 输入验证码
-                sleep(2)
-                browser.find_element(by = By.CSS_SELECTOR, value = 'a#submit').click()  # 点击‘提交’按钮
-            else:
-                break
+            os.remove(imgFile)
+            browser.find_element(by = By.CSS_SELECTOR, value = 'input#seccodeInput').send_keys(res) # 输入验证码
+            sleep(2)
+            browser.find_element(by = By.CSS_SELECTOR, value = 'a#submit').click()  # 点击‘提交’按钮
+        else:
+            break
