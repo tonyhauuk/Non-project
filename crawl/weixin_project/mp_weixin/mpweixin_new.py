@@ -3,27 +3,26 @@ import requests, random, re, time, hashlib, os, json, sys, subprocess, configpar
 from http import cookiejar
 from urllib import request, parse
 from time import sleep
-from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
+from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException, StaleElementReferenceException, WebDriverException
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from apscheduler.schedulers.blocking import BlockingScheduler
+
 # from selenium.webdriver.opera.options import Options as operaOptions
 
 sys.path.append('..')
 import crawlerfun
 from crawlerfun import ClearCache
 
+
 class MpWeixin:
-    def __init__(self, browser):
-        timeStamp = time.time()
-        timeArray = time.localtime(timeStamp)
-        self.date = time.strftime('%Y-%m-%d %H:%M:%S', timeArray)
+    def __init__(self):
         self.projectName = 'mp_weixin'
         self.d = crawlerfun.initDict(self.projectName)
-        self.browser = browser
+        self.browser = self.startBrowser()
         self.dir = self._dir = self.source = ''
         self.ipnum = crawlerfun.ip2num('154.209.71.54')
         self.debug = True
@@ -31,16 +30,32 @@ class MpWeixin:
 
 
     def crawl(self):
-        file = './userList.json'
-        with open(file, mode = 'r') as f:
-            keywords = json.load(f)
-            for key in keywords:  # 关键词循环
-                for value in keywords[key]:  # 公众号循环
-                    if value.get('state') == 0:
-                        continue
+        while True:
+            file = './userList.json'
+            with open(file, mode = 'r') as f:
+                keywords = json.load(f)
+                for key in keywords:  # 关键词循环
+                    for value in keywords[key]:  # 公众号循环
+                        if value.get('state') == 0:
+                            continue
 
-                    self.doCrawl(key, value.get('nickname'))
+                        try:
+                            timeStamp = time.time()
+                            timeArray = time.localtime(timeStamp)
+                            self.date = time.strftime('%Y-%m-%d %H:%M:%S', timeArray)
 
+                            self.doCrawl(key, value.get('nickname'))
+                        except Exception as e:
+                            print('crawl loop:', str(e)[:200])
+                            self.browser = self.restart()
+                            self.doCrawl(key, value.get('nickname'))
+            try:
+                self.browser = self.restart()
+            except Exception as e:
+                print('restart except:', e, '\n')
+            finally:
+                if os.path.exists('./none.txt'):  # 如果有none.txt文件，就更新userList.json 文件
+                    w.updateJson()
 
 
     def doCrawl(self, key, nickname):
@@ -48,6 +63,8 @@ class MpWeixin:
         try:
             url = 'https://weixin.sogou.com/weixin?type=1&query=' + nickname + '&ie=utf8&s_from=input&_sug_=y&_sug_type_='
             self.browser.get(url)
+            sleeping = random.randint(5, 45)
+            sleep(sleeping)
 
             if 'antispider' in self.browser.current_url:  # 检查是否被ban
                 self.checkBanned()
@@ -60,8 +77,10 @@ class MpWeixin:
                 pass
 
             print('\n' + key + ': ' + nickname)
-        except Exception as e:
-            print(e)
+        except (TimeoutException, WebDriverException) as e:
+            print('key:', nickname, '--> open url exception:', str(e)[:200])
+            sleep(10)
+            self.browser = self.restart()
             return
 
         while True:
@@ -88,9 +107,8 @@ class MpWeixin:
         if self.i > 0:
             crawlerfun.renameNew()
             crawlerfun.expire(self.date, self.d, self.projectName)
-
-        return self.browser
-
+            crawlerfun.deleteFiles(self.projectName)
+            crawlerfun.recordTotal(self.projectName, self.i)
 
 
     # 提取信息，一条的
@@ -129,16 +147,7 @@ class MpWeixin:
 
             self.write_new_file(link, title, self.source, self.i, self.date, 1152937)
         except Exception as e:
-            try:
-                self.browser.refresh()
-            except Exception as e:
-                print('after refresh error: ', e, '-' * 10)
-                self.i -= 1
-                crawlerfun.renameNew()
-                crawlerfun.expire(self.date, self.d, self.projectName)
-
-                raise Exception
-
+            return
 
 
     def bottomNews(self, browser, handle):
@@ -179,13 +188,13 @@ class MpWeixin:
             handles = self.browser.window_handles
             for newHandle in handles:
                 if newHandle != handle and newHandle != firstHandle:
-                    self.browser.switch_to.window(newHandle)    # 切换到新标签
-                    sleep(1)                                    # 等个几秒钟
-                    self.source = self.getPageText()            # 拿到网页源码
-                    link = self.browser.current_url             # 获取当前网页的链接
-                    self.browser.close()                        # 关闭当前标签页
+                    self.browser.switch_to.window(newHandle)        # 切换到新标签
+                    sleep(1)                                        # 等个几秒钟
+                    self.source = self.getPageText()                # 拿到网页源码
+                    link = self.browser.current_url                 # 获取当前网页的链接
+                    self.browser.close()                            # 关闭当前标签页
                     sleep(1)
-                    self.browser.switch_to.window(handle)       # 切换到之前的标签页
+                    self.browser.switch_to.window(handle)  # 切换到之前的标签页
                     break
 
             self.write_new_file(link, title, self.source, self.i, self.date, 1152937)
@@ -225,7 +234,7 @@ class MpWeixin:
         page_text = url + '\n' + title + '\n' + str(id) + '\n\n\n\n' + content
 
         if self.debug:
-            print('count:', self.i, ' --- ', title)
+            print('count:', self.i, ' --- ', title, time)
 
         if '' == self._dir:
             self.crawl_mkdir()
@@ -233,6 +242,12 @@ class MpWeixin:
         filename = self._dir + 'iask_' + str(i) + '_' + str(len(self.d)) + '.htm-2'
         for num in range(2):
             if 1 == crawlerfun.write_file(filename, page_text, ifdisplay = 0):
+                savePath = '/root/estar_save/' + self.projectName + '/'
+                if not os.path.exists(savePath):
+                    os.makedirs(savePath)
+                fileName = savePath + 'iask_' + str(i) + '_' + str(len(self.d)) + '.htm-2'
+                crawlerfun.write_file(fileName, page_text, ifdisplay = 0)  # 再次保存到/root/estar_save目录下
+
                 break
             else:  # 有时目录会被c程序删掉
                 crawlerfun.mkdir(self._dir)
@@ -289,10 +304,8 @@ class MpWeixin:
                 break
 
 
-
-
     def recordNone(self, key, nickname):
-        print('[' + key + '->' + nickname + ']', 'has no article!\n')
+        print('\n[' + key + '->' + nickname + ']', 'has no article!')
 
         with open('./none.txt', 'a+', newline = '\n') as f:
             f.write(key + '|' + nickname + '\n')
@@ -330,72 +343,57 @@ class MpWeixin:
             os.remove('./none.txt')
 
 
+    def startBrowser(self):
+        options = webdriver.ChromeOptions()
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-gpu')
+        options.add_argument('--disable-logging')
+        options.add_argument('--disable-infobars')
+        options.add_argument('--disable-javascript')
+        options.add_argument('--ignore-ssl-errors')
+        options.add_argument('--disable-extensions')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--ignore-certificate-errors')
+        options.add_argument('--disable-browser-side-navigation')
+        options.add_argument('--ignore-certificate-errors-spki-list')
+        options.add_argument('user-agent="Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.103 Safari/537.36"')
 
-def clean(browser):
-    subprocess.Popen('rm -rf /dev/shm/cache', shell = True, stdout = subprocess.PIPE)
-    subprocess.Popen('rm nohup.out -rf', shell = True, stdout = subprocess.PIPE)
-    subprocess.Popen('tmpwatch 1 /tmp/', shell = True, stdout = subprocess.PIPE)
-    ClearCache(browser)
+        browser = webdriver.Chrome(options = options)
 
-
-def startBrowser():
-    options = webdriver.ChromeOptions()
-    options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-gpu')
-    options.add_argument('--disable-logging')
-    options.add_argument('--disable-infobars')
-    options.add_argument('--disable-javascript')
-    options.add_argument('--ignore-ssl-errors')
-    options.add_argument('--disable-extensions')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--ignore-certificate-errors')
-    options.add_argument('--disable-browser-side-navigation')
-    options.add_argument('--ignore-certificate-errors-spki-list')
-    options.add_argument('user-agent="Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.103 Safari/537.36"')
-
-    browser = webdriver.Chrome(options = options)
-    # browser.set_window_size(1000, 690)
-    # browser.set_window_position(x = 100, y = 0)
-
-    return browser
-
-def crawlWeixin():
-    for i in range(2):
-        browser = startBrowser()
-        try:
-            w = MpWeixin(browser)
-            w.crawl()
-        except Exception as e:
-            pass
-        finally:
-            browser.quit()
+        return browser
 
 
-def loopCrawl():
-    while True:
-        browser = startBrowser()
-        w = MpWeixin(browser)
-        try:
-            w.crawl()
-            browser.quit()
-        except Exception as e:
-            browser.quit()
-            print('loop exception:', e)
-        finally:
-            if os.path.exists('./none.txt'):    # 如果有none.txt文件，就更新userList.json 文件
-                w.updateJson()
-            browser.quit()
+    def quit(self):
+        for _ in range(3):
+            try:
+                self.browser.quit()
+            except:
+                continue
+
+
+    def restart(self):
+        print('----- restart browser -----\n')
+        self.quit()
+        sleep(2)
+        browser = self.startBrowser()
+
+        return browser
+
+
+
 
 if __name__ == '__main__':
-    loopCrawl()
+    w = MpWeixin()
+    w.crawl()
+
     exit()
 
     # crawlWeixin()
 
     scheduler = BlockingScheduler()
     # scheduler.add_job(getUserList, 'cron', day = '*', hour = 4)         # 每天凌晨4点执行更新公众号程序
-    scheduler.add_job(crawlWeixin, 'cron', day = '*', hour = 7)         # 每天7点开始采集公众号信息
+    scheduler.add_job(crawlWeixin, 'cron', day = '*', hour = 7)  # 每天7点开始采集公众号信息
 
     try:
         scheduler.start()
