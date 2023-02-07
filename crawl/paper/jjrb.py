@@ -76,7 +76,7 @@ class Jjrb:
             self.i += 1
 
 
-        info.find_element_by_tag_name('p').click()
+        info.find_element_by_tag_name('a').click()
 
         self.source = self.getPageText()    # 拿到网页源码
         sleep(1)                            # 等个几秒钟

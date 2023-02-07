@@ -19,7 +19,7 @@ configuration:
   loggers:
     logger:
       -
-        name: net.lightbody.bmp.proxy.jetty.util.ThreadedServer
+        name: net.lightbody.bmp.proxy.jetty.utility.ThreadedServer
         level: warn
         additivity: false
       -

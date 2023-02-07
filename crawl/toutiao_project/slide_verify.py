@@ -115,7 +115,7 @@ def main():
     # 等待滑动框出现
     WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, 'verify-bar-box')))
     driver.get_screenshot_as_file(screenshot)  # 对整个页面截图
-    imgElement = driver.find_element_by_id('verify-bar-box')  # 定位验证码
+    imgElement = driver.find_element(by = By.ID, value = 'verify-bar-box')  # 定位验证码
     location = imgElement.location  # 获取验证码x,y轴坐标
     size = imgElement.size  # 获取验证码的长宽
 
@@ -125,11 +125,11 @@ def main():
     i = i.convert('RGB')
     frame1 = i.crop(rangle)  # 使用Image的crop函数，从截图中再次截取我们需要的区域
     frame1.save(newScreen)
-    # driver.find_element_by_xpath('/html/body/div[2]/div[2]/div[1]/div/div[2]/div[2]/div[2]').click()
+    # driver.find_element(by = By.XPATH, value = '/html/body/div[2]/div[2]/div[1]/div/div[2]/div[2]/div[2]').click()
     time.sleep(4)
 
     driver.get_screenshot_as_file(screenshot)
-    imgElement = driver.find_element_by_id('verify-bar-box')  # 定位验证码
+    imgElement = driver.find_element(by = By.ID, value = 'verify-bar-box')  # 定位验证码
     location = imgElement.location  # 获取验证码x,y轴坐标
     size = imgElement.size  # 获取验证码的长宽
     rangle = (int(location['x']), int(location['y']), int(location['x'] + size['width']), int(location['y'] + size['height']))  # 写成我们需要截取的位置坐标
@@ -143,7 +143,7 @@ def main():
     print('-------------')
     print(loc)
     # 找到滑动的圆球
-    element = driver.find_element_by_xpath('/html/body/div/div[5]/div/div/div[2]/img[2]')
+    element = driver.find_element(by = By.XPATH, value = '/html/body/div/div[5]/div/div/div[2]/img[2]')
     location = element.location
     # 获得滑动圆球的高度
     y = location["y"]

@@ -18,7 +18,7 @@ class Baijiahao:
         timeArray = time.localtime(timeStamp)
         self.date = time.strftime('%Y-%m-%d %H:%M:%S', timeArray)
         self.timeStamp = int(time.time())
-        self.projectName = 'food'
+        self.projectName = 'baijiahao'
         self.d = d
         self.dir = self._dir = self.source = ''
         # self.ipnum = crawlerfun.ip2num('61.130.181.229')
@@ -210,5 +210,5 @@ class Baijiahao:
         return timeStamp
 
 if __name__ == '__main__':
-    chanye = Baijiahao({})
-    chanye.crawl()
+    b = Baijiahao({})
+    b.crawl()

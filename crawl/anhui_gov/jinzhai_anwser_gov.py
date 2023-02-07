@@ -9,7 +9,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import crawlerfun
 
-class Xijiang:
+
+class Jinzhai_anwser:
     def __init__(self, browser):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -22,27 +23,28 @@ class Xijiang:
         self.ipnum = crawlerfun.ip2num(browser.ip)
         self.debug = True
 
+
     def crawl(self):
-        print('\n' ,'-' * 10, 'http://www.ahjinzhai.gov.cn', '-' * 10, '\n')
+        print('\n', '-' * 10, 'http://www.ahjinzhai.gov.cn', '-' * 10, '\n')
         self.total = self.i = 0
 
-        url = 'http://www.ahjinzhai.gov.cn/luan/site/tpl/2951?organId=6626851'
-        try:
-            self.browser.get(url)
-        except TimeoutException:
-            return -1
+        url = ['http://www.ahjinzhai.gov.cn/luan/site/tpl/2951?organId=6626851',
+               'https://www.ahjinzhai.gov.cn/hdjl/sjxx/index.html']
 
+        for link in url:
+            try:
+                self.browser.get(link)
+            except TimeoutException:
+                return -1
 
-        newsList = self.browser.find_elements_by_css_selector('div > ul > li')
-        for item in newsList:
-            dateTime = item.find_element_by_css_selector('li.date').text
+            newsList = self.browser.find_elements_by_css_selector('div.guestbook-table > ul')
+            for item in newsList[1:]:
+                dateTime = item.find_element_by_css_selector('li.t2').text
 
-            if dateTime in self.date:
-                self.extract(item)
-            else:
-                break
-
-
+                if dateTime in self.date:
+                    self.extract(item)
+                else:
+                    break
 
         print('quantity:', self.total)
         if self.total > 0:
@@ -80,14 +82,14 @@ class Xijiang:
             handles = self.browser.window_handles
             for newHandle in handles:
                 if newHandle != handle:
-                    self.browser.switch_to.window(newHandle)    # Switch new tab
-                    sleep(2)                                    # Wait 2 seconds
-                    self.source = self.getPageText()            # Download page source
-                    self.browser.close()                        # Close current new tab
-                    self.browser.switch_to.window(handle)       # Switch to before tab
+                    self.browser.switch_to.window(newHandle)  # Switch new tab
+                    sleep(2)  # Wait 2 seconds
+                    self.source = self.getPageText()  # Download page source
+                    self.browser.close()  # Close current new tab
+                    self.browser.switch_to.window(handle)  # Switch to before tab
                     break
 
-            self.write_new_file(href, title, self.source, self.i, self.date, 1172191)
+            self.write_new_file(href, title, self.source, self.i, self.date, 1052725)
         except Exception as e:
             print('Element error:', e)
             return
@@ -100,6 +102,7 @@ class Xijiang:
             html = self.browser.page_source
 
         return html
+
 
     def write_new_file(self, url, title, source, i, time, id):
         content = '''

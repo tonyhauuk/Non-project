@@ -34,21 +34,22 @@ class MpWeixin:
             file = './userList.json'
             with open(file, mode = 'r') as f:
                 keywords = json.load(f)
-                for key in keywords:  # 关键词循环
-                    for value in keywords[key]:  # 公众号循环
-                        if value.get('state') == 0:
-                            continue
 
-                        try:
-                            timeStamp = time.time()
-                            timeArray = time.localtime(timeStamp)
-                            self.date = time.strftime('%Y-%m-%d %H:%M:%S', timeArray)
+            for key in keywords:  # 关键词循环
+                for value in keywords[key]:  # 公众号循环
+                    if value.get('state') == 0:
+                        continue
 
-                            self.doCrawl(key, value.get('nickname'))
-                        except Exception as e:
-                            print('crawl loop:', str(e)[:200])
-                            self.browser = self.restart()
-                            self.doCrawl(key, value.get('nickname'))
+                    try:
+                        timeStamp = time.time()
+                        timeArray = time.localtime(timeStamp)
+                        self.date = time.strftime('%Y-%m-%d %H:%M:%S', timeArray)
+
+                        self.doCrawl(key, value.get('nickname'))
+                    except Exception as e:
+                        print('crawl loop:', str(e)[:200])
+                        self.browser = self.restart()
+                        self.doCrawl(key, value.get('nickname'))
             try:
                 self.browser = self.restart()
             except Exception as e:

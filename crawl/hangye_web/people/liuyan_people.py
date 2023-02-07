@@ -7,7 +7,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-
+from selenium.webdriver.common.by import By
 
 # import cralwerfun
 
@@ -34,12 +34,14 @@ class Liuyan_people:
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
-                n = self.doCrawl(x)
-                if n == -1:
-                    status = False
-                    break
-                else:
-                    i += n
+                channel = ['建言', '投诉', '咨询']
+                for key in channel:
+                    n = self.doCrawl(x, key)
+                    if n == -1:
+                        status = False
+                        break
+                    else:
+                        i += n
 
         if status:
             if i > 0:
@@ -50,20 +52,28 @@ class Liuyan_people:
             return 'interrupt', 'none', 'error'
 
 
-    def doCrawl(self, url):
+    def doCrawl(self, url, key):
         self.i = 0
         try:
             self.browser.get(url)
+            sleep(3)
         except TimeoutException:
             return -1
 
+        if key == '投诉':
+            self.browser.find_element(by = By.CSS_SELECTOR, value = 'div#tab-second').click()
+            sleep(3)
+        elif key == '咨询':
+            self.browser.find_element(by = By.CSS_SELECTOR, value = 'div#tab-third').click()
+            sleep(3)
+
         start = 0
         while True:
-            newsList = self.browser.find_elements_by_css_selector('ul#list_content > li')
+            newsList = self.browser.find_elements(By.CSS_SELECTOR, 'ul.replyList > li')
             end = len(newsList)
             for item in newsList[start:end]:
-                dateTime = item.find_element_by_css_selector('h3 > span').text.strip()
-
+                dateTime = item.find_element(By.CSS_SELECTOR, 'div.headMainS.fl > p').text.strip()
+                # print('date time:',dateTime)
                 if self.date.split(' ')[0] in dateTime:
                     status = self.extract(item)
                     if status:
@@ -76,7 +86,7 @@ class Liuyan_people:
             else:
                 try:
                     start = end + 1
-                    self.browser.find_element_by_css_selector('div#show_more').click()
+                    self.browser.find_element(By.CSS_SELECTOR, 'div.mordList').click()
                     sleep(1)
                 except:
                     break
@@ -93,11 +103,11 @@ class Liuyan_people:
 
     # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_css_selector('h2 > b > a')
+        url = ''
+        titleInfo = item.find_element(By.CSS_SELECTOR, 'div.tabList.fl > h1')
         title = titleInfo.text
         try:
-            href = titleInfo.get_attribute('href')
-            md5 = self.makeMD5(href)
+            md5 = self.makeMD5(title)
 
             # dict filter
             if md5 in self.d:
@@ -116,12 +126,12 @@ class Liuyan_people:
             for newHandle in handles:
                 if newHandle != handle:
                     self.browser.switch_to.window(newHandle)        # 切换到新标签
-                    sleep(2)                                        # 等个几秒钟
-                    self.source = self.getPageText()                # 拿到网页源码
+                    sleep(5)                                        # 等个几秒钟
+                    self.source, url = self.getPageText()           # 拿到网页源码
                     self.browser.close()                            # 关闭当前标签页
                     self.browser.switch_to.window(handle)           # 切换到之前的标签页
                     break
-            print(self.i, href, title)
+            print(self.i, url, title)
             # self.write_new_file(href, title, self.source, self.i, self.date, 92816)
         except Exception:
             return False
@@ -129,11 +139,11 @@ class Liuyan_people:
 
     def getPageText(self):  # 获取网页正文
         try:
-            html = self.browser.find_element_by_css_selector('p.zoom.content').get_attribute('innerHTML')
+            html = self.browser.find_element(By.CSS_SELECTOR, 'p#replyContentMain').get_attribute('innerHTML')
         except NoSuchElementException:
             html = self.browser.page_source
 
-        return html
+        return html, self.browser.current_url
 
 
     # 生成md5信息

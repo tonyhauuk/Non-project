@@ -1,7 +1,7 @@
 import os, re
 
 index = 0
-path = 'E:/Download/'
+path = 'E:/download/'
 prefix = []
 fileList = os.listdir(path)
 for i in range(len(fileList)):

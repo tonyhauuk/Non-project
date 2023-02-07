@@ -8,7 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 import time, json, pprint
 
-server = Server('D:\\PyProject\\Non-project\\app\\util\\browsermob-proxy-2.1.4\\bin\\browsermob-proxy.bat')
+server = Server('D:\\PyProject\\Non-project\\app\\utility\\browsermob-proxy-2.1.4\\bin\\browsermob-proxy.bat')
 server.start()
 proxy = server.create_proxy()
 

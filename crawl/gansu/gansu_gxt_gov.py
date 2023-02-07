@@ -54,7 +54,7 @@ class Gansu_gxt_gov:
         except TimeoutException:
             return -1
 
-        if 'fdzdgknr' not in url:
+        if 'xxgk' not in url:
             newsCss = 'div.gsxwl.lanse > ul > li'
             dateCss = 'span'
         else:

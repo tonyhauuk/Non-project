@@ -9,80 +9,105 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import crawlerfun
 
-
-class StateGrid:
+class Liuyan_people:
     def __init__(self, browser):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
-        self.projectName = 'grid'
         self.date = time.strftime('%Y-%m-%d %H:%M:%S', timeArray)
+        self.projectName = 'liuyan_people'
         self.d = crawlerfun.initDict(self.projectName)
-        self.browser = browser.driver
+        self.browser = browser
         self.dir = self._dir = self.source = ''
-        self.ipnum = crawlerfun.ip2num(browser.ip)
+        self.ipnum = crawlerfun.ip2num('205.185.126.45')
         self.debug = True
 
 
     def crawl(self):
-        print('\n', '-' *10, 'https://ecp.sgcc.com.cn/ecp2.0/portal/#', '-'*10, '\n')
-        self.i = self.total = 0
-        try:
-            self.browser.get('https://ecp.sgcc.com.cn/ecp2.0/portal/#/list/list-com/2018032600000014_5_20180502001')
-            sleep(5)
-        except Exception as e:
+        print('\n', '-' * 10, 'http://liuyan.people.com.cn/', '-' * 10, '\n')
+        self.total = 0
+        i = 0
+        status = True
+        file = './record/liuyan_people_weblist.txt'
+        with open(file, mode = 'r') as f:
+            url = f.readlines()
+            for x in url:
+                n = self.doCrawl(x)
+                if n == -1:
+                    status = False
+                    break
+                else:
+                    i += n
+
+        if status:
+            if i > 0:
+                return 'complete', self.source, 'ok'
+            else:
+                return 'complete', 'none', 'ok'
+        else:
             return 'interrupt', 'none', 'error'
 
-        while True:     # 翻页循环
-            newsList = self.browser.find_elements_by_css_selector('tbody > tr.cur')
-            for item in newsList:
-                try:
-                    dateTime = item.find_element_by_css_selector('td.time').text
-                    print('date time:', dateTime)
-                except:
-                    continue
 
-                if dateTime in self.date:
-                    self.extract(item)
+    def doCrawl(self, url):
+        self.i = 0
+        try:
+            self.browser.get(url)
+            sleep(5)
+        except TimeoutException:
+            return -1
+
+        start = 0
+        while True:
+            newsList = self.browser.find_elements_by_css_selector('ul.replyList > li')
+            end = len(newsList)
+            for item in newsList[start:end]:
+                dateTime = self.addhours(item.find_element_by_css_selector('div.headMainS.fl > p').text.strip())
+
+                if dateTime.split(' ')[0] in self.date:
+                    status = self.extract(item)
+                    if status:
+                        break
                 else:
                     break
 
-            if self.i < len(newsList):
+
+            if self.i == 0:
                 break
-            else:
-                try:
-                    self.browser.find_element_by_xpath('/html/body/app-root/app-main/app-list/div/app-list-com/div/div/div[2]/div[2]/page/div/div/button[8]').click()  # 翻页
-                    self.i = 0
-                    sleep(5)
-                except NoSuchElementException as e:
-                    break
+
+            try:
+                start = end + 1
+                self.browser.find_element_by_css_selector('div.mordList').click()
+                sleep(1)
+                self.i = 0
+            except:
+                break
 
 
-        print('quantity:', self.total)
         if self.total > 0:
             crawlerfun.renameNew()
             crawlerfun.expire(self.date, self.d, self.projectName)
 
-            return 'complete', self.source, 'ok'
+            return self.total
         else:
-            return 'complete', 'none', 'ok'
+            return 0
 
 
     # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_css_selector('td.title > span > label')
-        title = item.find_element_by_css_selector('span.fl').get_attribute('title')
+        url = ''
+        titleInfo = item.find_element_by_css_selector('div.tabList.fl > h1')
+        title = titleInfo.text
         try:
             md5 = crawlerfun.makeMD5(title)
 
             # dict filter
             if md5 in self.d:
-                return
+                return True
             else:
-                self.d[md5] = self.date.split(' ')[0]       # 往dict里插入记录
+                self.d[md5] = self.date.split(' ')[0]  # 往dict里插入记录
                 self.i += 1
                 self.total += 1
 
-            handle = self.browser.current_window_handle     # 拿到当前页面的handle
+            handle = self.browser.current_window_handle  # 拿到当前页面的handle
             titleInfo.click()
 
             # switch tab window
@@ -91,34 +116,31 @@ class StateGrid:
             for newHandle in handles:
                 if newHandle != handle:
                     self.browser.switch_to.window(newHandle)        # 切换到新标签
-                    sleep(2)                                        # 等个几秒钟
-                    self.source, self.href = self.getPageText()     # 拿到网页源码
+                    sleep(5)                                        # 等个几秒钟
+                    self.source, url = self.getPageText()                # 拿到网页源码
                     self.browser.close()                            # 关闭当前标签页
                     self.browser.switch_to.window(handle)           # 切换到之前的标签页
                     break
 
-            self.write_new_file(self.href, title, self.source, self.i, self.date, 1170771)
+            if url == '':
+                return True
+            else:
+                self.write_new_file(url, title, self.source, self.i, self.date, 92816)
+                return False
         except Exception:
-            return
+            return False
 
 
-    def getPageText(self):
+    def getPageText(self):  # 获取网页正文
         try:
-            content = self.browser.find_element_by_css_selector('div#md').get_attribute('innerHTML')
+            html = self.browser.find_element_by_css_selector('p#replyContentMain').get_attribute('innerHTML')
         except NoSuchElementException:
-            content = self.browser.page_source
+            html = self.browser.page_source
 
-        href = self.browser.current_url
-
-        return content, href
+        return html, self.browser.current_url
 
 
-
-    # 写一个新文章
     def write_new_file(self, url, title, source, i, time, id):
-        if self.debug:
-            print('count:', i, ' --- ', title)
-
         content = '''
                 <html>
                     <head> 
@@ -136,8 +158,11 @@ class StateGrid:
                 '''
         page_text = url + '\n' + title + '\n' + str(id) + '\n\n\n\n' + content
 
+        if self.debug:
+            print('count:', self.i, ' --- ', title)
+
         if '' == self._dir:
-            self.zytzb_mkdir()
+            self.crawl_mkdir()
 
         filename = self._dir + 'iask_' + str(i) + '_' + str(len(self.d)) + '.htm-2'
         for num in range(2):
@@ -147,8 +172,7 @@ class StateGrid:
                 crawlerfun.mkdir(self._dir)
 
 
-    # 制作电网目录，注意不创建目录，只是生成目录信息
-    def zytzb_mkdir(self):
+    def crawl_mkdir(self):
         dirroot = '/estar/newhuike2/1/'
         tm_s, tm_millisecond = crawlerfun.get_timestamp(ifmillisecond = 1)
         dirsmall = 'iask' + str(self.ipnum) + '.' + str(1) + '.' + str(tm_s) + '.' + str(tm_millisecond) + '/'
@@ -157,5 +181,15 @@ class StateGrid:
 
         return self._dir, self.dir
 
+
+    def addhours(self, datetime):
+        timezone = 15 * 60 * 60
+        datetime = datetime.replace('&nbsp;', ' ')
+        timeArray = time.strptime(datetime, '%Y-%m-%d %H:%M')
+        timeStamp = int(time.mktime(timeArray)) + timezone
+        timeArray = time.localtime(timeStamp)
+        dateTime = time.strftime('%Y-%m-%d %H:%M', timeArray)
+
+        return dateTime
 
 

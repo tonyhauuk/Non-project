@@ -2,14 +2,15 @@
 
 import time, hashlib, os
 from time import sleep
-from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException
+from selenium.common.exceptions import NoSuchElementException, NoSuchAttributeException, TimeoutException, InvalidArgumentException
 from selenium import webdriver
+from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-class Tianshui_gov:
+class Hubei_jxt_gov:
     def __init__(self, d):
         timeStamp = time.time()
         timeArray = time.localtime(timeStamp)
@@ -18,15 +19,17 @@ class Tianshui_gov:
         self.dir = self._dir = ''
         self.debug = True
 
+
     def crawl(self):
-        print('\n' ,'-' * 10, 'http://www.tianshui.gov.cn/', '-' * 10)
+        print('\n' ,'-' * 10, 'http://jxt.hubei.gov.cn/', '-' * 10, '\n')
 
         self.browser = webdriver.Firefox()
         self.browser.set_window_position(x = 650, y = 0)
+
         self.total = 0
         i = 0
         status = True
-        file = './tianshui_gov_weblist.txt'
+        file = './hubei_jxt_weblist.txt'
         with open(file, mode = 'r') as f:
             url = f.readlines()
             for x in url:
@@ -50,35 +53,37 @@ class Tianshui_gov:
         self.i = 0
         try:
             self.browser.get(url)
+            sleep(2)
         except TimeoutException:
             return -1
 
+        newsCss = dateCss = ''
+
+        if 'bmdt' in url:
+            newsCss = 'div.main > ul.list-b > li'
+            dateCss = 'p.date'
+        elif 'fbjd' in url:
+            newsCss = 'div.article-box > ul.info-list > li:not(.line)'
+            dateCss = 'span'
+
+
         while True:
-            if 'A00040A00003' not in url:
-                newsList = self.browser.find_elements_by_css_selector('div.bt-mod-wzpb-03 > ul > li')
-                for item in newsList:
-                    dateTime = item.find_element_by_class_name('bt-data-time').text
-                    print(dateTime)
-                    if dateTime in self.date:
-                        self.extract(item)
-                    else:
-                        break
-            else:
-                newsList = self.browser.find_elements_by_css_selector('td#newslist_3505 > table > tbody > tr')
-                for item in newsList[1:]:
-                    dateTime = item.find_element_by_tag_name('font').text
-                    if dateTime in self.date:
-                        self.extract(item)
-                    else:
-                        break
+            newsList = self.browser.find_elements(by = By.CSS_SELECTOR, value = newsCss)
+            for item in newsList:
+                dateTime = item.find_element(by = By.CSS_SELECTOR, value = dateCss).text
+
+                if self.date.split(' ')[0] in dateTime:
+                    self.extract(item)
+                else:
+                    break
 
             if self.i < len(newsList):  # 如果当前采集的数量小于当前页的条数，就不翻页了
                 break
             else:
                 try:
-                    self.browser.find_element_by_partial_link_text('下一页').click()  # 点击下一页
+                    self.browser.find_element(by = By.PARTIAL_LINK_TEXT, value = '下一页').click()  # 点击下一页
                     self.i = 0
-                except NoSuchElementException:
+                except:
                     break
 
 
@@ -94,7 +99,7 @@ class Tianshui_gov:
 
     # 提取信息，一条的
     def extract(self, item):
-        titleInfo = item.find_element_by_tag_name('a')
+        titleInfo = item.find_element(by = By.CSS_SELECTOR, value = 'a')
 
         try:
             href = titleInfo.get_attribute('href')
@@ -125,27 +130,16 @@ class Tianshui_gov:
                     self.browser.switch_to.window(handle)       # 切换到之前的标签页
                     break
             print(href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 15121)
-        except (NoSuchElementException, NoSuchAttributeException) as e:
-            print('Element error:', e)
+            # self.write_new_file(href, title, self.source, self.i, self.date, 1164563)
         except Exception:
             return
 
 
     def getPageText(self):  # 获取网页正文
-        currentURL = self.browser.current_url
-        html = ''
         try:
-            if 'tianshui.gov.cn' in currentURL:
-                html = self.browser.find_element_by_css_selector('div.main-txt1').get_attribute('innerHTML')
-            elif 'gansu.gov.cn' in currentURL:
-                html = self.browser.find_element_by_css_selector('div#zoom').get_attribute('innerHTML')
-            elif 'www.gov.cn' in currentURL:
-                html = self.browser.find_element_by_css_selector('div.pages_content').get_attribute('innerHTML')
-
+            html = self.browser.find_element(by = By.CSS_SELECTOR, value = 'div.view.TRS_UEDITOR.trs_paper_default').get_attribute('innerHTML')
         except NoSuchElementException:
             html = self.browser.page_source
-
 
         return html
 
@@ -190,31 +184,11 @@ class Tianshui_gov:
             lst = os.listdir(root)
             for l in lst:
                 if '_' in l:
-                    os.rename(root + l, root + l.strip('_')) 
+                    os.rename(root + l, root + l.strip('_'))
         except:
             pass
 
 
-    def deleteFiles(self):
-        filePath = '/root/estar_save/sc_gov/'
-        timeStamp = time.time()
-        timeArray = time.localtime(timeStamp)
-        current = time.strftime("%Y-%m-%d", timeArray)
-        name = os.listdir(filePath)
-
-        for i in name:
-            try:
-                fileName = filePath + i
-                fileInfo = os.stat(fileName)
-            except FileNotFoundError:
-                continue
-            ts = fileInfo.st_mtime
-            timeArr = time.localtime(ts)
-            date = time.strftime("%Y-%m-%d", timeArr)
-            if current != date:
-                os.remove(fileName)
-
-
 if __name__ == '__main__':
-    ts = Tianshui_gov({})
-    ts.crawl()
+    hb = Hubei_jxt_gov({})
+    hb.crawl()

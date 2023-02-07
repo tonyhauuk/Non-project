@@ -65,7 +65,6 @@ class Amrsz_gov:
         except TimeoutException:
             return -1
 
-
         while True:
             newsList = self.browser.find_elements_by_css_selector(newsCss)
 
@@ -82,8 +81,8 @@ class Amrsz_gov:
                 break
             else:
                 try:
-                    self.i = 0
                     self.browser.find_element_by_partial_link_text('下一页').click()  # 点击下一页
+                    self.i = 0
                 except NoSuchElementException:
                     break
 
@@ -118,12 +117,10 @@ class Amrsz_gov:
             sleep(2)
             self.source = self.getPageText()  # 拿到网页源码
 
-            print(href, title)
-            # self.write_new_file(href, title, self.source, self.i, self.date, 1167706)
+            self.write_new_file(href, title, self.source, self.i, self.date, 1167706)
             self.browser.back()
             sleep(2)
         except Exception as e:
-            print(e)
             return
 
 
@@ -132,7 +129,6 @@ class Amrsz_gov:
             html = self.browser.find_element_by_css_selector('div.articlecontent').get_attribute('innerHTML')
         except NoSuchElementException:
             html = self.browser.page_source
-
 
         return html
 
